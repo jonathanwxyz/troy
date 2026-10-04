@@ -1,0 +1,8 @@
+# Personal notes, kept local
+ideas.txt
+
+# Rebuilt by scripts/ (see data/README.md)
+data/raw/
+data/*.sqlite
+
+__pycache__/
