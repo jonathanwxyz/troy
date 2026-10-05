@@ -189,5 +189,5 @@ licence. Share-alike reaches the data, not the code that displays it.
 | `verse_timings` | made here with Meta's MMS forced aligner ([MahmoudAshraf/mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner)) | the model is CC BY-NC 4.0: keep uses non-commercial |
 | recordings (not in git) | Project Eustathios readings on YouTube | the readers' copyright: stay local, link rather than redistribute |
 
-The font (Gentium Book Plus, via Google Fonts) is under the SIL Open Font License. The
-code has no licence yet.
+The fonts (EB Garamond, and Gentium Book Plus as fallback, via Google Fonts) are under the
+SIL Open Font License. The code is under the MIT licence (see `LICENSE`).
