@@ -37,6 +37,8 @@ Books 16–20 out of order).
 
 8. `scripts/import_scholia.py` → `scholia`, from First1KGreek (`-v` counts per book and
    manuscript)
+9. `scripts/import_commentaries.py` → `commentaries`, from Perseus's XML (downloads a
+   125 MB archive once and keeps the four files needed in `raw/perseus/`)
 
 `scripts/compare_alignments.py REF CANDIDATE [-v]` scores one alignment file against
 another (link precision/recall, per-word agreement).
@@ -127,6 +129,16 @@ another (link precision/recall, per-word agreement).
   printed. About 50 scholia keep a stray number at the start where the edition's line
   number disagrees with the section's.
 
+- **commentaries** `seq`: English commentaries, one paragraph per row, shown with the
+  scholia: `book, line, line_to, source, text`, and `parts` (JSON `[[kind, text], …]`;
+  `l` = lemma, the words commented on, `i` = italic, `t` = plain). 17,660 notes on 9,108
+  lines. `Leaf`: Walter Leaf, *The Iliad* (1900–02), all 24 books. `Seymour`: T. D.
+  Seymour, Books I–III and IV–VI (1891). `Benner`: A. R. Benner, *Selections* (1903),
+  Books 1–3, 5, 6, 9, 15, 16, 18, 19, 22, 24. Greek converted from Beta Code. A paragraph
+  opening "Vs. 1-7." covers those lines. Benner's "§ 41" and Seymour's "§ 40 c" refer to
+  their grammar appendices, which are not imported. Seymour cites books by letter
+  (α 1 = Od. 1.1, Π 842 = Il. 16.842).
+
 ## Known mismatches (expect these)
 
 **Line numbering.** `line` is the standard (OCT) number. The site numbers straight
@@ -171,6 +183,7 @@ licence. Share-alike reaches the data, not the code that displays it.
 | `shortdefs`, `lemma_defs` | Perseus/Logeion short definitions via [helmadik/shortdefs](https://github.com/helmadik/shortdefs) | none stated; credit Perseus and Logeion |
 | `translation_passages`, `translation_lines` (murray) | A. T. Murray (Loeb, 1924), [Perseus](https://github.com/PerseusDL/canonical-greekLit) `perseus-eng3` | text public domain; encoding CC BY-SA 4.0 |
 | `translation_lines` (polylas) | Iakovos Polylas (1923), [Greek Wikisource](https://el.wikisource.org/) | public domain (Wikisource's own edits CC BY-SA 4.0) |
+| `commentaries` | Leaf (1900), Seymour (1891), Benner (1903): Perseus's XML, [bulk download](https://www.perseus.tufts.edu/hopper/opensource/download) | texts public domain; encoding CC BY-SA 3.0 |
 | `scholia` | Dindorf & Maass, *Scholia Graeca in Homeri Iliadem* (1875–88), [First1KGreek](https://github.com/OpenGreekAndLatin/First1KGreek) tlg5026.tlg001 | CC BY-SA 4.0 |
 | `verse_timings` | made here with Meta's MMS forced aligner ([MahmoudAshraf/mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner)) | the model is CC BY-NC 4.0: keep uses non-commercial |
 | recordings (not in git) | Project Eustathios readings on YouTube | the readers' copyright: stay local, link rather than redistribute |

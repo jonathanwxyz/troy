@@ -408,14 +408,21 @@ function renderScholia(data) {
     const box = el("details", "sch-src");
     box.open = !scholiaFolded.has(src.id);
     box.dataset.src = src.id;
+    box.lang = src.lang;
     const sum = el("summary");
-    sum.append(el("span", "siglum", src.id.split("-")[0]), src.name, el("span", "count", src.notes.length));
+    sum.append(el("span", "siglum", src.siglum), src.name, el("span", "count", src.notes.length));
     box.append(sum);
     for (const n of src.notes) {
       const p = el("p", "sch");
       if (n.from != null) p.append(el("span", "range", `${n.from}–${n.to}`));
-      if (n.lemma) p.append(el("span", "lemma", `${n.lemma}]`), " ");
-      p.append(n.text);
+      if (n.parts) {  // a commentary note: styled runs (l = lemma, i = italic, t = text)
+        for (const [kind, text] of n.parts) {
+          p.append(kind === "l" ? el("span", "lemma", text) : kind === "i" ? el("i", null, text) : text);
+        }
+      } else {
+        if (n.lemma) p.append(el("span", "lemma", `${n.lemma}]`), " ");
+        p.append(n.text);
+      }
       box.append(p);
     }
     box.addEventListener("toggle", () => {

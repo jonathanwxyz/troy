@@ -9,9 +9,10 @@ Routes:
                        and per-word paraphrase equivalents where aligned; Homeric words
                        sharing a paraphrase word, e.g. a verb in tmesis, share a group id;
                        Murray's English per line where split, else as ~5-line passages;
-                       the number of scholia per line)
+                       the number of scholia and commentary notes per line)
   /api/word/<b>/<l>/<i>  JSON: treebank parse of word i (whitespace chunk) of verse b.l
-  /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript
+  /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript, and
+                         the English commentaries (Leaf, Seymour, Benner)
   /audio/<file>        a file from recordings/, with HTTP Range support for seeking
 """
 import argparse
@@ -59,9 +60,11 @@ def book_json(book):
         "SELECT line, text FROM translation_lines WHERE translation = 'murray' AND book = ?", (book,)))
     modern = dict(con.execute(
         "SELECT line, text FROM translation_lines WHERE translation = 'polylas' AND book = ?", (book,)))
-    # How many scholia each line has (one covering several lines counts for each).
+    # How many scholia and commentary notes each line has (one covering several lines
+    # counts for each).
     scholia = {}
-    for first, last in con.execute("SELECT line, line_to FROM scholia WHERE book = ?", (book,)):
+    for first, last in con.execute("SELECT line, line_to FROM scholia WHERE book = ? UNION ALL "
+                                   "SELECT line, line_to FROM commentaries WHERE book = ?", (book, book)):
         for line in range(first, last + 1):
             scholia[line] = scholia.get(line, 0) + 1
     # Passages only where the lines aren't split yet.
@@ -84,10 +87,16 @@ def book_json(book):
             "translation": translation}
 
 
-# Manuscripts of the scholia (scholia.source), in the order shown.
+# Sources shown in the scholia panel, in order: (id, siglum, name, language). The
+# manuscripts of the ancient scholia (scholia.source), then the English commentaries
+# (commentaries.source).
 SCHOLIA_SOURCES = [
-    ("A", "Venetus A"), ("A-int", "Venetus A, interlinear"), ("B", "Venetus B"),
-    ("B-rec", "Venetus B, later hand"), ("T", "Townleianus"), ("T-rec", "Townleianus, later hand"),
+    ("A", "A", "Venetus A", "grc"), ("A-int", "A", "Venetus A, interlinear", "grc"),
+    ("B", "B", "Venetus B", "grc"), ("B-rec", "B", "Venetus B, later hand", "grc"),
+    ("T", "T", "Townleianus", "grc"), ("T-rec", "T", "Townleianus, later hand", "grc"),
+    ("Leaf", "Leaf", "Commentary on the Iliad (1900)", "en"),
+    ("Seymour", "Seymour", "Commentary, Books I–VI (1891)", "en"),
+    ("Benner", "Benner", "Selections from the Iliad (1903)", "en"),
 ]
 # "μῆνιν] παρὰ τὸ μένω …": the lemma (the words commented on) and the note.
 LEMMA = re.compile(r"([^\]]{1,90})\]\s*(.*)", re.S)
@@ -97,6 +106,8 @@ def scholia_json(book, line):
     con = sqlite3.connect(DB)
     rows = con.execute("SELECT line, line_to, source, text FROM scholia "
                        "WHERE book = ? AND line <= ? AND line_to >= ? ORDER BY seq", (book, line, line)).fetchall()
+    comm = con.execute("SELECT line, line_to, source, parts FROM commentaries "
+                       "WHERE book = ? AND line <= ? AND line_to >= ? ORDER BY seq", (book, line, line)).fetchall()
     con.close()
     notes = {}
     for first, last, source, text in rows:
@@ -104,9 +115,12 @@ def scholia_json(book, line):
         notes.setdefault(source, []).append({
             "lemma": m[1].strip() if m else None, "text": m[2] if m else text,
             **({"from": first, "to": last} if first != last else {})})
+    for first, last, source, parts in comm:  # styled runs: l = lemma, i = italic, t = text
+        notes.setdefault(source, []).append({
+            "parts": json.loads(parts), **({"from": first, "to": last} if first != last else {})})
     return {"book": book, "line": line,
-            "sources": [{"id": sid, "name": name, "notes": notes[sid]}
-                        for sid, name in SCHOLIA_SOURCES if sid in notes]}
+            "sources": [{"id": sid, "siglum": siglum, "name": name, "lang": lang, "notes": notes[sid]}
+                        for sid, siglum, name, lang in SCHOLIA_SOURCES if sid in notes]}
 
 
 # AGDT dependency labels; suffixes _CO (coordinated) and _AP (in apposition).
