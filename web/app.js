@@ -14,6 +14,7 @@ const position = document.getElementById("position");
 const follow = document.getElementById("follow");
 const showParaphrase = document.getElementById("show-paraphrase");
 const showTranslation = document.getElementById("show-translation");
+const showModern = document.getElementById("show-modern");
 const gloss = document.getElementById("gloss");
 const holdOnHover = document.getElementById("hold-on-hover");
 const card = document.getElementById("card");
@@ -74,6 +75,13 @@ function render(data) {
       para.lang = "grc";
       para.textContent = v.paraphrase;
       li.append(para);
+    }
+    if (v.modern) {
+      const mt = document.createElement("span");
+      mt.className = "mt";
+      mt.lang = "el";
+      mt.textContent = v.modern;
+      li.append(mt);
     }
     if (v.english) {
       const en = document.createElement("span");
@@ -205,6 +213,15 @@ function applyTranslation() {
 try { showTranslation.checked = localStorage.getItem("showTranslation") === "1"; } catch {}
 showTranslation.addEventListener("change", applyTranslation);
 applyTranslation();
+
+function applyModern() {
+  document.body.classList.toggle("show-modern", showModern.checked);
+  try { localStorage.setItem("showModern", showModern.checked ? "1" : "0"); } catch {}
+  if (current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+}
+try { showModern.checked = localStorage.getItem("showModern") === "1"; } catch {}
+showModern.addEventListener("change", applyModern);
+applyModern();
 showParaphrase.addEventListener("change", applyParaphrase);
 applyParaphrase();
 

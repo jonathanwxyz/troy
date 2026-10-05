@@ -19,7 +19,8 @@ Run in this order; each script replaces only its own tables. Pages are cached in
    after step 2)
 6. `scripts/import_translation.py` → `translation_passages` (Murray's English), then
    `scripts/import_translation_lines.py` → `translation_lines` (split per line, from
-   `translation_lines/murray_book01.txt`)
+   `translation_lines/murray_book01.txt`), and `scripts/import_polylas.py` →
+   `translation_lines` (Polylas's modern Greek, from Wikisource)
 7. `.venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus`
    → `verse_timings` (setup in `requirements-audio.txt`; recordings stay local, see
    `.gitignore`)
@@ -81,6 +82,13 @@ another (link precision/recall, per-word agreement).
   gives the first words of each line's English; the importer checks the pieces rejoin
   to the passage exactly. Where Murray reorders clauses across lines the cut is the
   best fit, so a line's English can carry a word or two belonging to its neighbour.
+- **translation_lines**, `translation = 'polylas'`: Iakovos Polylas's modern Greek verse
+  translation (published 1923, public domain) from Greek Wikisource. He keeps Homer's
+  line count, and Wikisource marks every 5th line, so lines are taken one for one. A
+  book is loaded only if its line count matches the Greek and every marker sits on its
+  line: Books 1, 3, 4, 9, 10, 12, 15–17, 20–23 pass; the rest are skipped (a line more or
+  less, or a misplaced marker). Within a 5-line block Polylas sometimes merges or splits
+  lines, so a line can carry the sense of its neighbour (e.g. his 1.16 renders Greek 1.17).
 - **verse_timings** `(recording, model, book, line)`: where each verse is in a
   recording, in seconds. `line` 0 is the spoken title (`books.title`). `start` = first
   sound, `speech_end` = last sound, `end` = next verse's start (so `end - speech_end` is

@@ -80,16 +80,16 @@ def main():
 
     con.executescript(
         """
-        DROP TABLE IF EXISTS translation_lines;
-        CREATE TABLE translation_lines (
-            translation TEXT    NOT NULL,
+        CREATE TABLE IF NOT EXISTS translation_lines (
+            translation TEXT    NOT NULL,  -- murray (English), polylas (modern Greek), ...
             book        INTEGER NOT NULL,
             line        INTEGER NOT NULL,
-            text        TEXT,              -- NULL: no English of its own (in the line before)
+            text        TEXT,              -- NULL: no text of its own (in the line before)
             PRIMARY KEY (translation, book, line)
         ) WITHOUT ROWID;
         """
     )
+    con.execute("DELETE FROM translation_lines WHERE translation = ?", (TRANSLATION,))
     con.executemany("INSERT INTO translation_lines VALUES (?, ?, ?, ?)", rows)
     con.commit()
     con.close()

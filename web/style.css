@@ -53,7 +53,8 @@ h1 { margin: 0.2rem 0 0; font-weight: 400; font-size: 1.7em; }
 
 #verses { list-style: none; margin: 0; padding: 0; }
 .credit { margin: 0.4rem 0 0; color: var(--muted); font-family: system-ui, sans-serif; font-size: 12px; }
-body:not(.show-translation) .credit { display: none; }
+body:not(.show-translation) #translation-credit { display: none; }
+body:not(.show-modern) #modern-credit { display: none; }
 
 /* Murray's English, one passage (~5 lines) after the verses it translates. */
 .trans {
@@ -70,6 +71,17 @@ body:not(.show-translation) .credit { display: none; }
 .trans .lines { font-family: system-ui, sans-serif; font-size: 11px; margin-right: 0.4rem; opacity: 0.8; }
 .trans.active { border-left-color: var(--current-bar); color: var(--text); }
 body:not(.show-translation) .trans { display: none; }
+
+/* Polylas's modern Greek, one line per verse. */
+.verse .mt {
+  grid-column: 2;
+  margin-top: 0.15rem;
+  font-size: 0.8em;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--current-bar) 55%, var(--muted));
+}
+.verse.current .mt { color: color-mix(in srgb, var(--current-bar) 75%, var(--text)); }
+body:not(.show-modern) .verse .mt { display: none; }
 
 /* Murray's English for a single line (where split), under the verse. */
 .verse .en {

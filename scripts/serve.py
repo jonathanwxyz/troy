@@ -52,6 +52,8 @@ def book_json(book):
         sharers.setdefault((para_line, para_index), set()).add((line, wi))
     english = dict(con.execute(
         "SELECT line, text FROM translation_lines WHERE translation = 'murray' AND book = ?", (book,)))
+    modern = dict(con.execute(
+        "SELECT line, text FROM translation_lines WHERE translation = 'polylas' AND book = ?", (book,)))
     # Passages only where the lines aren't split yet.
     translation = [{"from": a, "to": b, "text": t} for a, b, t in con.execute(
         "SELECT line_from, line_to, text FROM translation_passages "
@@ -62,6 +64,7 @@ def book_json(book):
     if not rows:
         return None
     verses = [{"line": line, "text": text, "paraphrase": paraphrase, "english": english.get(line),
+               "modern": modern.get(line),
                **(dict(zip(("start", "speechEnd", "end"), timing[line])) if line in timing else {}),
                **({"glosses": {i: " ".join(w) for i, w in glosses[line].items()}} if line in glosses else {}),
                **({"groups": groups[line]} if line in groups else {})}
