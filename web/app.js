@@ -1,6 +1,6 @@
 // Iliad reader: shows a book's Homeric text and highlights the verse being recited.
 const BOOK = Number(new URLSearchParams(location.search).get("book") || 1);
-// Speaker icon shown beside a verse on hover: clicking the row (not a word) plays from it.
+// Speaker icon shown beside a verse on hover: clicking the row (not a word) goes to it.
 const SEEK_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' +
   '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>' +
   '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
@@ -279,7 +279,9 @@ function skipSilence(i, t) {
   if (t > quietSince + GAP_KEEP && next.start - t > LEAD_IN + 0.15) audio.currentTime = next.start - LEAD_IN;
 }
 
-function seekTo(i, { play = true } = {}) {
+// Jumping keeps the play state by default: a paused reader stays paused on the new verse.
+// (Evaluated before clearHold, so a hover-hold counts as playing.)
+function seekTo(i, { play = isPlaying() } = {}) {
   if (i < 0 || i >= verses.length) return;
   clearHold();
   released = null;  // replaying a verse while hovering it should hold at its end again
@@ -615,10 +617,10 @@ for (const ev of ["wheel", "touchmove"]) {
 function stepBack() {
   // Within the first 1.5 s of a verse, go to the previous one; otherwise restart this one.
   const i = verseAt(audio.currentTime);
-  seekTo(i > 0 && audio.currentTime - verses[i].start < 1.5 ? i - 1 : Math.max(i, 0), { play: isPlaying() });
+  seekTo(i > 0 && audio.currentTime - verses[i].start < 1.5 ? i - 1 : Math.max(i, 0));
 }
 function stepForward() {
-  seekTo(Math.min(verseAt(audio.currentTime) + 1, verses.length - 1), { play: isPlaying() });
+  seekTo(Math.min(verseAt(audio.currentTime) + 1, verses.length - 1));
 }
 document.getElementById("prev").addEventListener("click", stepBack);
 document.getElementById("next").addEventListener("click", stepForward);
@@ -698,7 +700,7 @@ for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-st
 
 // Back to the beginning of the book (keeps the play state).
 document.getElementById("to-start").addEventListener("click", () => {
-  seekTo(0, { play: isPlaying() });
+  seekTo(0);
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
