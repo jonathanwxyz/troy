@@ -154,9 +154,9 @@ function update() {
     const v = verses[i];
     holdIfHovered(v, t);
     v.el.classList.toggle("pausing", t >= v.speechEnd);
-    position.textContent = (v.line === 0 ? "title" : `${BOOK}.${v.line}`) + (heldBy === v ? " · held" : "");
+    showPosition((v.line === 0 ? "title" : `${BOOK}.${v.line}`) + (heldBy === v ? " · held" : ""));
   } else {
-    position.textContent = "—";
+    showPosition("—");
   }
 }
 
@@ -174,15 +174,42 @@ function clearHold() {
   heldBy = null;
 }
 
-function seekTo(i) {
+function seekTo(i, { play = true } = {}) {
   if (i < 0 || i >= verses.length) return;
   clearHold();
   released = null;  // replaying a verse while hovering it should hold at its end again
   audio.currentTime = verses[i].start;
   lastUserScroll = 0;  // a deliberate jump: let the view follow again
   update();
-  if (audio.paused) audio.play();
+  if (play && audio.paused) audio.play();
 }
+
+// Position box: shows the current line; type a line ("40" or "1.40") and Enter to jump.
+function showPosition(text) {
+  if (document.activeElement !== position) position.value = text;
+}
+
+function jumpToTyped() {
+  const m = position.value.trim().match(/^(?:(\d+)\.)?(\d+)$/);
+  const book = m && m[1] ? Number(m[1]) : BOOK;
+  const i = m && book === BOOK ? verses.findIndex((v) => v.line === Number(m[2])) : -1;
+  if (i < 0) {
+    position.classList.add("invalid");
+    position.select();
+    return;
+  }
+  position.blur();
+  seekTo(i, { play: false });
+  verses[i].el.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+position.addEventListener("focus", () => { position.select(); });
+position.addEventListener("input", () => position.classList.remove("invalid"));
+position.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); jumpToTyped(); }
+  else if (e.key === "Escape") { e.preventDefault(); position.blur(); }
+});
+position.addEventListener("blur", () => { position.classList.remove("invalid"); update(); });
 
 // Smooth highlighting while playing; timeupdate alone fires only ~4 times a second.
 function tick() {

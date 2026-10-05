@@ -259,7 +259,21 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   cursor: pointer;
 }
 .controls button:hover { border-color: var(--current-bar); }
-#position { min-width: 5.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+#position {
+  width: 6.5rem;
+  padding: 0.2rem 0.3rem;
+  text-align: center;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: text;
+}
+#position:hover { border-color: var(--rule); }
+#position:focus { outline: none; border-color: var(--current-bar); color: var(--text); background: var(--bg); }
+#position.invalid { border-color: #c0392b; }
 .toggle { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
 .toggle.push { margin-left: auto; }
 

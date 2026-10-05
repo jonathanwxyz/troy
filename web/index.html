@@ -24,7 +24,8 @@
   <audio id="audio" controls preload="metadata"></audio>
   <div class="controls">
     <button id="prev" title="Previous verse (←)" aria-label="Previous verse">‹</button>
-    <span id="position">—</span>
+    <input id="position" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
+           value="—" title="Type a line number and press Enter" aria-label="Line: type a number and press Enter to jump">
     <button id="next" title="Next verse (→)" aria-label="Next verse">›</button>
     <label class="toggle push" title="Pause at the end of the verse the pointer is on; resume when it moves off"><input type="checkbox" id="hold-on-hover"> pause on hover</label>
     <label class="toggle"><input type="checkbox" id="show-paraphrase" checked> paraphrase</label>
