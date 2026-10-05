@@ -11,6 +11,11 @@ Run in this order; each script replaces only its own tables. Pages are cached in
 1. `scripts/parse_iliad.py` → `verses` (+ `iliad.tsv`), from vasilestancu.ro
 2. `scripts/import_treebank.py` → `sentences`, `tokens`, from Perseus AGDT 2.1
 3. `scripts/align_words.py` → `word_links`
+4. `scripts/import_paraphrase_alignment.py` → `paraphrase_links`, from the hand-made
+   files in `paraphrase_alignment/` (`-v` lists Gaza's unaligned additions)
+
+`scripts/compare_alignments.py REF CANDIDATE [-v]` scores one alignment file against
+another (link precision/recall, per-word agreement).
 
 ## Tables
 
@@ -34,6 +39,14 @@ Run in this order; each script replaces only its own tables. Pages are cached in
   | joined | several site words = one token (ἦ τοι = ἤτοι) | 14 |
   | variant | different reading in the same slot (ἐς / ἐν) | 11 |
   | movable_nu | ἔτελλεν / ἔτελλε | 5 |
+
+- **paraphrase_links**: Homeric word → Gaza's paraphrase words, one row per pair
+  (`book, line, word_index` as in `word_links`; `para_line, para_index` index the
+  whitespace chunks of `verses.paraphrase`). Hand-aligned; Book 1 so far.
+  Conventions: articles and ὦ go with their noun; Gaza's additions (λέγων etc.) stay
+  unaligned; split verbs (ἐπὶ … ἔτελλεν) link both parts to the one Attic verb; when
+  Gaza moves words across a line break, `para_line` differs from `line`. The source
+  format is described at the top of `paraphrase_alignment/book01.txt`.
 
 ## Known mismatches (expect these)
 
