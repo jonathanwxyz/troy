@@ -250,6 +250,110 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   #card { left: 8px; right: 8px; bottom: 7.5rem; max-height: 45vh; }
 }
 
+/* Scholia: the ancient notes on the current verse. */
+#scholia {
+  position: fixed;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  font-size: 16.5px;
+  line-height: 1.5;
+}
+#scholia[hidden] { display: none; }
+.sch-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.55rem 0.6rem 0.45rem 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+.sch-title { font-size: 1.1em; }
+#scholia-line { font-family: system-ui, sans-serif; font-size: 12.5px; color: var(--current-bar);
+                font-variant-numeric: tabular-nums; }
+#scholia-close {
+  margin-left: auto;
+  border: 0; background: transparent; color: var(--muted);
+  font-size: 22px; line-height: 1; cursor: pointer; padding: 0 0.3rem;
+}
+#scholia-close:hover { color: var(--text); }
+#scholia-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.3rem 1rem 0.6rem; }
+#scholia .note { color: var(--muted); font-style: italic; }
+.sch-src { margin-top: 0.4rem; }
+.sch-src summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.sch-src summary::-webkit-details-marker { display: none; }
+.sch-src summary::before { content: "▸"; font-size: 11px; transition: transform 120ms ease; }
+.sch-src[open] summary::before { transform: rotate(90deg); }
+.sch-src summary:hover { color: var(--text); }
+.siglum {
+  font-family: var(--greek);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--current-bar);
+  min-width: 1.1em;
+}
+.sch-src .count {
+  margin-left: auto;
+  font-size: 11.5px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--current-bg) 70%, transparent);
+}
+.sch { margin: 0.2rem 0 0.65rem; }
+.sch .lemma { font-weight: 700; }
+.sch .range {
+  float: right;
+  margin-left: 0.4rem;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+}
+.sch-credit {
+  margin: 0;
+  padding: 0.4rem 1rem 0.55rem;
+  border-top: 1px solid var(--rule);
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Wide screens: in the left-hand margin, like the scholia around the text of a manuscript. */
+@media (min-width: 90rem) {
+  #scholia {
+    top: 4.25rem;
+    bottom: 8rem;
+    left: 1.25rem;
+    width: clamp(16rem, calc((100vw - 44rem) / 2 - 5rem), 26rem);
+  }
+}
+/* Narrower: a sheet above the player, with room left below the text to scroll past it. */
+@media (max-width: 89.99rem) {
+  #scholia {
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(44rem, calc(100vw - 16px));
+    bottom: 7.5rem;
+    height: 38vh;
+  }
+  html:has(body.show-scholia) { scroll-padding-bottom: calc(7.5rem + 38vh); }
+  body.show-scholia main { padding-bottom: calc(9rem + 38vh); }
+  body.focused.show-scholia main { padding-bottom: calc(8.5rem + 38vh); }
+}
+
 #gloss {
   position: absolute;
   z-index: 10;
@@ -345,7 +449,7 @@ body.playing .play .icon-pause { display: block; }
 body.muted #mute .vol-x { display: inline; }
 
 .controls {
-  max-width: 44rem;
+  max-width: 56rem;
   margin: 0.45rem auto 0;
   display: flex;
   flex-wrap: wrap;

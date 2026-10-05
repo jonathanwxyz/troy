@@ -206,7 +206,10 @@ function setFocus(i) {
 function update() {
   const t = audio.currentTime;
   const i = verseAt(t);
-  if (verses.length) setFocus(Math.max(i, 0));
+  if (verses.length) {
+    setFocus(Math.max(i, 0));
+    showScholiaFor(verses[focusIdx]);
+  }
   if (i !== current) {
     if (current >= 0) verses[current].el.classList.remove("current", "pausing");
     current = i;
@@ -360,6 +363,84 @@ applyModern();
 showParaphrase.addEventListener("change", applyParaphrase);
 applyParaphrase();
 
+// Scholia panel: the ancient notes on the current verse, grouped by manuscript. Sources
+// the reader has folded stay folded (remembered per browser).
+const showScholia = document.getElementById("show-scholia");
+const scholiaPanel = document.getElementById("scholia");
+const scholiaBody = document.getElementById("scholia-body");
+const scholiaLine = document.getElementById("scholia-line");
+const scholiaCache = new Map();  // line -> response promise
+let scholiaShown = null;         // line the panel shows
+let scholiaFolded = new Set();
+try { scholiaFolded = new Set(JSON.parse(localStorage.getItem("scholiaFolded")) ?? []); } catch {}
+
+function fetchScholia(line) {
+  if (!scholiaCache.has(line)) {
+    scholiaCache.set(line, fetch(`/api/scholia/${BOOK}/${line}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .catch((err) => { scholiaCache.delete(line); throw err; }));
+  }
+  return scholiaCache.get(line);
+}
+
+function renderScholia(data) {
+  scholiaBody.replaceChildren();
+  scholiaBody.scrollTop = 0;
+  if (!data.sources.length) scholiaBody.append(el("p", "note", "No scholia on this line."));
+  for (const src of data.sources) {
+    const box = el("details", "sch-src");
+    box.open = !scholiaFolded.has(src.id);
+    box.dataset.src = src.id;
+    const sum = el("summary");
+    sum.append(el("span", "siglum", src.id.split("-")[0]), src.name, el("span", "count", src.notes.length));
+    box.append(sum);
+    for (const n of src.notes) {
+      const p = el("p", "sch");
+      if (n.from != null) p.append(el("span", "range", `${n.from}–${n.to}`));
+      if (n.lemma) p.append(el("span", "lemma", `${n.lemma}]`), " ");
+      p.append(n.text);
+      box.append(p);
+    }
+    box.addEventListener("toggle", () => {
+      box.open ? scholiaFolded.delete(src.id) : scholiaFolded.add(src.id);
+      try { localStorage.setItem("scholiaFolded", JSON.stringify([...scholiaFolded])); } catch {}
+    });
+    scholiaBody.append(box);
+  }
+}
+
+function showScholiaFor(v) {
+  if (!showScholia.checked || !v || v.line === scholiaShown) return;
+  const line = scholiaShown = v.line;
+  scholiaLine.textContent = line ? `${BOOK}.${line}` : "";
+  if (!line) {  // the spoken title
+    scholiaBody.replaceChildren(el("p", "note", "The scholia begin at line 1."));
+    return;
+  }
+  fetchScholia(line)
+    .then((data) => { if (scholiaShown === line) renderScholia(data); })
+    .catch((err) => {
+      if (scholiaShown === line) scholiaBody.replaceChildren(el("p", "note", `Could not load: ${err.message}`));
+    });
+}
+
+function applyScholia() {
+  document.body.classList.toggle("show-scholia", showScholia.checked);
+  scholiaPanel.hidden = !showScholia.checked;
+  try { localStorage.setItem("showScholia", showScholia.checked ? "1" : "0"); } catch {}
+  scholiaShown = null;
+  if (showScholia.checked && focusIdx >= 0) showScholiaFor(verses[focusIdx]);
+}
+try { showScholia.checked = localStorage.getItem("showScholia") === "1"; } catch {}
+showScholia.addEventListener("change", applyScholia);
+document.getElementById("scholia-close").addEventListener("click", () => {
+  showScholia.checked = false;
+  applyScholia();
+});
+applyScholia();
+// A folded source opens with a click; its summary shouldn't keep focus (Space is play/pause).
+scholiaBody.addEventListener("mousedown", (e) => { if (e.target.closest("summary")) e.preventDefault(); });
+
 // Word glosses: hovering a Homeric word shows Gaza's equivalent.
 // Words sharing a paraphrase word (e.g. κατὰ … ἔκηα → κατέκαυσα) light up together.
 function linkGroup(w, on) {
@@ -484,7 +565,7 @@ document.getElementById("card-close").addEventListener("click", closeCard);
 // clicks in the player bar leave it open). On the text, that click only closes the card:
 // it doesn't also jump the audio.
 document.addEventListener("click", (e) => {
-  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player, #focus-controls")) return;
+  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player, #focus-controls, #scholia")) return;
   closeCard();
   if (list.contains(e.target)) {
     e.stopPropagation();
@@ -611,7 +692,7 @@ showVolume();
 
 // Buttons don't keep keyboard focus after a click, so Space stays play/pause (rather
 // than pressing the last-clicked button again on top of it).
-for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle")) {
+for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle, #scholia-close")) {
   b.addEventListener("mousedown", (e) => e.preventDefault());
 }
 
@@ -636,9 +717,13 @@ document.addEventListener("keydown", (e) => {
   if (e.key === " ") { e.preventDefault(); togglePlay(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }
   else if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); stepForward(); }
-  else if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+  else if (e.ctrlKey || e.metaKey || e.altKey) return;
+  else if (e.key === "f" || e.key === "F") {
     focused.checked = !focused.checked;
     applyFocused();
+  } else if (e.key === "s" || e.key === "S") {
+    showScholia.checked = !showScholia.checked;
+    applyScholia();
   }
 });
 

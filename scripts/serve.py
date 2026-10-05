@@ -10,6 +10,7 @@ Routes:
                        sharing a paraphrase word, e.g. a verb in tmesis, share a group id;
                        Murray's English per line where split, else as ~5-line passages)
   /api/word/<b>/<l>/<i>  JSON: treebank parse of word i (whitespace chunk) of verse b.l
+  /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript
   /audio/<file>        a file from recordings/, with HTTP Range support for seeking
 """
 import argparse
@@ -74,6 +75,31 @@ def book_json(book):
               for line, text, paraphrase in rows]
     return {"book": book, "audio": f"/audio/{rec[0]}" if rec else None, "verses": verses,
             "translation": translation}
+
+
+# Manuscripts of the scholia (scholia.source), in the order shown.
+SCHOLIA_SOURCES = [
+    ("A", "Venetus A"), ("A-int", "Venetus A, interlinear"), ("B", "Venetus B"),
+    ("B-rec", "Venetus B, later hand"), ("T", "Townleianus"), ("T-rec", "Townleianus, later hand"),
+]
+# "μῆνιν] παρὰ τὸ μένω …": the lemma (the words commented on) and the note.
+LEMMA = re.compile(r"([^\]]{1,90})\]\s*(.*)", re.S)
+
+
+def scholia_json(book, line):
+    con = sqlite3.connect(DB)
+    rows = con.execute("SELECT line, line_to, source, text FROM scholia "
+                       "WHERE book = ? AND line <= ? AND line_to >= ? ORDER BY seq", (book, line, line)).fetchall()
+    con.close()
+    notes = {}
+    for first, last, source, text in rows:
+        m = LEMMA.fullmatch(text)
+        notes.setdefault(source, []).append({
+            "lemma": m[1].strip() if m else None, "text": m[2] if m else text,
+            **({"from": first, "to": last} if first != last else {})})
+    return {"book": book, "line": line,
+            "sources": [{"id": sid, "name": name, "notes": notes[sid]}
+                        for sid, name in SCHOLIA_SOURCES if sid in notes]}
 
 
 # AGDT dependency labels; suffixes _CO (coordinated) and _AP (in apposition).
@@ -166,6 +192,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(book_json(int(m[1])))
         elif m := re.fullmatch(r"/api/word/(\d+)/(\d+)/(\d+)", self.path):
             self.send_json(word_json(*map(int, m.groups())))
+        elif m := re.fullmatch(r"/api/scholia/(\d+)/(\d+)", self.path):
+            self.send_json(scholia_json(*map(int, m.groups())))
         elif self.path.startswith("/audio/"):
             self.send_audio(RECORDINGS / Path(self.path[len("/audio/"):]).name)
         else:

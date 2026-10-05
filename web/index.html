@@ -78,11 +78,22 @@
     <label class="toggle"><input type="checkbox" id="show-paraphrase" checked> paraphrase</label>
     <label class="toggle"><input type="checkbox" id="show-modern"> μετάφραση</label>
     <label class="toggle"><input type="checkbox" id="show-translation"> translation</label>
+    <label class="toggle" title="Ancient scholia on the current verse (S)"><input type="checkbox" id="show-scholia"> σχόλια</label>
     <label class="toggle"><input type="checkbox" id="follow" checked> follow</label>
   </div>
 </footer>
 
 <div id="gloss" role="tooltip" hidden></div>
+
+<aside id="scholia" hidden aria-label="Scholia">
+  <header class="sch-head">
+    <span class="sch-title">σχόλια</span>
+    <span id="scholia-line"></span>
+    <button id="scholia-close" aria-label="Hide scholia" title="Hide scholia (S)">×</button>
+  </header>
+  <div id="scholia-body"></div>
+  <p class="sch-credit">Dindorf &amp; Maass, <i>Scholia Graeca in Homeri Iliadem</i> (1875–88), via First1KGreek · CC BY-SA 4.0</p>
+</aside>
 
 <aside id="card" hidden aria-live="polite">
   <button id="card-close" aria-label="Close">×</button>

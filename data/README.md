@@ -32,6 +32,9 @@ The recordings (Project Eustathios, modern pronunciation, Homer only) stay local
 them `recordings/iliadNN.m4a` by the book number in each title (the playlist has
 Books 16–20 out of order).
 
+8. `scripts/import_scholia.py` → `scholia`, from First1KGreek (`-v` counts per book and
+   manuscript)
+
 `scripts/compare_alignments.py REF CANDIDATE [-v]` scores one alignment file against
 another (link precision/recall, per-word agreement).
 
@@ -109,6 +112,18 @@ another (link precision/recall, per-word agreement).
   0.03 s from its end); the rest are run-on lines read without a pause. Known slip:
   1.312 starts ~1.4 s early (just before the pause that precedes it).
 
+- **scholia** `seq`: the ancient scholia from Dindorf & Maass, one scholion per row:
+  `book, line` (and `line_to` when it covers several lines), `source` (the manuscript),
+  `text` (opening with its lemma, the words commented on, up to "]"). 31,018 scholia on
+  11,286 lines (563 of Book 1's 611). Sources: `A` Venetus A (Dindorf vols 1–2), `A-int`
+  its interlinear glosses, `B` Venetus B (vols 3–4), `B-rec` B's later hand, `T`
+  Townleianus (Maass, vols 5–6), `T-rec` T's second hand. The same scholion often stands
+  in A, B and T alike. The editors' Latin footnotes and the marginal sigla (A=, B+: how far
+  another manuscript agrees) are dropped. Editorial brackets (⌈ ⌋ for letters read from
+  other manuscripts, 〈 〉 for additions) and the asterisks marking later hands are kept as
+  printed. About 50 scholia keep a stray number at the start where the edition's line
+  number disagrees with the section's.
+
 ## Known mismatches (expect these)
 
 **Line numbering.** `line` is the standard (OCT) number. The site numbers straight
@@ -138,8 +153,24 @@ words of 23.866 appear on the site only inside its note and have no link.
 **Other.** 74 treebank words have no lemma (e.g. Ἄϊδι, 1.3). The treebank's elision
 marks are normalised to ’ and all Greek is NFC.
 
-## Licences
+## Sources and licences
 
-The treebank is CC BY-SA 3.0 US (Perseus Digital Library): anything published from
-`tokens`/`word_links` needs attribution and the same licence. Homeric text and paraphrase
-are from vasilestancu.ro.
+The old texts themselves are public domain; the licences below cover the digital
+editions they come from. Nothing here restricts private use. They matter once the app or
+its data is published: then credit each source and release anything derived from the
+CC BY-SA sources (the tables marked so, or a database built from them) under the same
+licence. Share-alike reaches the data, not the code that displays it.
+
+| Table(s) | Source | Licence |
+|---|---|---|
+| `verses` | Homeric text and Theodorus Gaza's paraphrase, [vasilestancu.ro](https://vasilestancu.ro/) | none stated: ask before publishing a copy |
+| `tokens`, `sentences`, `word_links` | Perseus [Ancient Greek Dependency Treebank](https://perseusdl.github.io/treebank_data/) 2.1 | CC BY-SA 3.0 US |
+| `shortdefs`, `lemma_defs` | Perseus/Logeion short definitions via [helmadik/shortdefs](https://github.com/helmadik/shortdefs) | none stated; credit Perseus and Logeion |
+| `translation_passages`, `translation_lines` (murray) | A. T. Murray (Loeb, 1924), [Perseus](https://github.com/PerseusDL/canonical-greekLit) `perseus-eng3` | text public domain; encoding CC BY-SA 4.0 |
+| `translation_lines` (polylas) | Iakovos Polylas (1923), [Greek Wikisource](https://el.wikisource.org/) | public domain (Wikisource's own edits CC BY-SA 4.0) |
+| `scholia` | Dindorf & Maass, *Scholia Graeca in Homeri Iliadem* (1875–88), [First1KGreek](https://github.com/OpenGreekAndLatin/First1KGreek) tlg5026.tlg001 | CC BY-SA 4.0 |
+| `verse_timings` | made here with Meta's MMS forced aligner ([MahmoudAshraf/mms-300m-1130-forced-aligner](https://huggingface.co/MahmoudAshraf/mms-300m-1130-forced-aligner)) | the model is CC BY-NC 4.0: keep uses non-commercial |
+| recordings (not in git) | Project Eustathios readings on YouTube | the readers' copyright: stay local, link rather than redistribute |
+
+The font (Gentium Book Plus, via Google Fonts) is under the SIL Open Font License. The
+code has no licence yet.
