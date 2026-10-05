@@ -94,6 +94,20 @@ body:not(.show-translation) .verse .en { display: none; }
   transition: background-color 120ms ease;
 }
 .verse:hover { background: color-mix(in srgb, var(--current-bg) 35%, transparent); }
+.verse { position: relative; }
+.verse .seek-icon {
+  position: absolute;
+  left: 0.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+.verse:not(.untimed):hover .seek-icon { opacity: 0.85; }
+@media (hover: none) { .verse .seek-icon { display: none; } }
 .verse .num {
   text-align: right;
   color: var(--muted);
@@ -114,9 +128,9 @@ body:not(.show-translation) .verse .en { display: none; }
 .verse.current .para { color: color-mix(in srgb, var(--text) 70%, var(--muted)); }
 body.hide-paraphrase .verse .para { display: none; }
 body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
-body.hide-paraphrase .w { border-radius: 3px; transition: background-color 80ms ease; }
-body.hide-paraphrase .w:hover,
-body.hide-paraphrase .w.linked {
+.w { border-radius: 3px; transition: background-color 80ms ease; }
+.w[data-gloss]:hover,
+.w.linked {
   background: color-mix(in srgb, var(--current-bar) 22%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--current-bar) 22%, transparent);
 }
@@ -241,4 +255,5 @@ body.hide-paraphrase .w.linked {
   body { font-size: 19px; }
   .trans { margin-left: calc(2.2rem + 3px + 0.5rem); }
   .verse { grid-template-columns: 2.2rem 1fr; column-gap: 0.5rem; }
+  .verse:not(.untimed):hover .num { visibility: hidden; }  /* narrow column: the icon takes its place */
 }

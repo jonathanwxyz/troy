@@ -1,5 +1,10 @@
 // Iliad reader: shows a book's Homeric text and highlights the verse being recited.
 const BOOK = Number(new URLSearchParams(location.search).get("book") || 1);
+// Speaker icon shown beside a verse on hover: clicking the row (not a word) plays from it.
+const SEEK_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' +
+  '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>' +
+  '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+  'd="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
 const GREEK_NUMERALS = ["", "Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ",
                         "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"];
 
@@ -55,6 +60,12 @@ function render(data) {
       });
     } else {
       text.textContent = v.text;
+    }
+    if (v.start != null) {
+      const icon = document.createElement("span");
+      icon.className = "seek-icon";
+      icon.innerHTML = SEEK_ICON;
+      li.append(icon);
     }
     li.append(num, text);
     if (v.paraphrase) {
@@ -197,7 +208,7 @@ applyTranslation();
 showParaphrase.addEventListener("change", applyParaphrase);
 applyParaphrase();
 
-// Word glosses: with the paraphrase hidden, hovering a Homeric word shows its equivalent.
+// Word glosses: hovering a Homeric word shows Gaza's equivalent.
 // Words sharing a paraphrase word (e.g. κατὰ … ἔκηα → κατέκαυσα) light up together.
 function linkGroup(w, on) {
   if (w.dataset.group == null) return;
@@ -208,7 +219,7 @@ function linkGroup(w, on) {
 
 list.addEventListener("mouseover", (e) => {
   const w = e.target.closest(".w");
-  if (!w || showParaphrase.checked || w.dataset.gloss == null) return;
+  if (!w || w.dataset.gloss == null) return;
   linkGroup(w, true);
   gloss.textContent = w.dataset.gloss;
   gloss.classList.toggle("none", w.dataset.gloss === "—");
