@@ -21,9 +21,16 @@ Run in this order; each script replaces only its own tables. Pages are cached in
    `scripts/import_translation_lines.py` → `translation_lines` (split per line, from
    `translation_lines/murray_book01.txt`), and `scripts/import_polylas.py` →
    `translation_lines` (Polylas's modern Greek, from Wikisource)
-7. `.venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus`
-   → `verse_timings` (setup in `requirements-audio.txt`; recordings stay local, see
-   `.gitignore`)
+7. `.venv/bin/python scripts/align_audio.py --book N --audio recordings/iliadNN.m4a`
+   → `verse_timings` (setup in `requirements-audio.txt`), or `scripts/align_all.sh` for
+   all 24 books (~4–5 h on CPU). `scripts/check_timings.py` checks the result against
+   the pauses in each recording.
+
+The recordings (Project Eustathios, modern pronunciation, Homer only) stay local, see
+`.gitignore`. Fetch them as AAC with
+`yt-dlp -f "bestaudio[ext=m4a]" -o "recordings/yt/%(id)s.%(ext)s" <playlist>` and name
+them `recordings/iliadNN.m4a` by the book number in each title (the playlist has
+Books 16–20 out of order).
 
 `scripts/compare_alignments.py REF CANDIDATE [-v]` scores one alignment file against
 another (link precision/recall, per-word agreement).
@@ -33,7 +40,8 @@ another (link precision/recall, per-word agreement).
 - **verses** `(book, line)`: `homer` (site text), `paraphrase` (Gaza; NULL where he has
   none), `site_line` (the number the site shows).
 - **books** `book`: `title`, the spoken intro read before line 1 of that book's
-  recording (Book 1: Ὁμήρου Ἰλιάς. Ῥαψῳδία Α.). Edit `book_titles.tsv` to add more.
+  recording (Ὁμήρου Ἰλιάς. Ῥαψῳδία Α., Β., …; heard for Book 1, assumed for the others).
+  Edit `book_titles.tsv` if a recording opens differently.
 - **tokens** `seq`: one row per treebank word in reading order, with `book, line`,
   `form, lemma, postag` and the tag decoded (`pos, person, number, tense, mood, voice,
   gender, gram_case, degree`), plus `head, relation` (parse) and `artificial`.

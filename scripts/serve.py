@@ -37,10 +37,13 @@ EDGE_PUNCT = re.compile(r"^[^\w’']+|[^\w’']+$")
 def book_json(book):
     con = sqlite3.connect(DB)
     title = con.execute("SELECT title FROM books WHERE book = ?", (book,)).fetchone()
-    rec = con.execute("SELECT recording FROM verse_timings WHERE book = ? AND model = ? LIMIT 1",
+    # One recording per book; prefer the AAC (.m4a) files over older formats.
+    rec = con.execute("SELECT recording FROM verse_timings WHERE book = ? AND model = ? "
+                      "GROUP BY recording ORDER BY recording LIKE '%.m4a' DESC LIMIT 1",
                       (book, MODEL)).fetchone()
     timing = {line: (start, speech_end, end) for line, start, speech_end, end in con.execute(
-        "SELECT line, start, speech_end, end FROM verse_timings WHERE book = ? AND model = ?", (book, MODEL))}
+        "SELECT line, start, speech_end, end FROM verse_timings WHERE book = ? AND model = ? AND recording = ?",
+        (book, MODEL, rec[0] if rec else None))}
     rows = ([(0, title[0], None)] if title else []) + con.execute(
         "SELECT line, homer, paraphrase FROM verses WHERE book = ? ORDER BY line", (book,)).fetchall()
     # Homeric word -> its paraphrase words, keyed by the word's whitespace-chunk index.

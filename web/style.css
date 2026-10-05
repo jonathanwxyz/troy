@@ -33,7 +33,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-padding-bottom: 120px; }
+html { scroll-padding-top: 4rem; scroll-padding-bottom: 120px; }
 body {
   margin: 0;
   background: var(--bg);
@@ -45,11 +45,53 @@ body {
 main {
   max-width: 44rem;
   margin: 0 auto;
-  padding: 2.5rem 16px 9rem;
+  padding: 1.5rem 16px 9rem;
 }
-header { text-align: center; margin-bottom: 2rem; }
-.eyebrow { margin: 0; color: var(--muted); letter-spacing: 0.08em; font-size: 0.85em; }
-h1 { margin: 0.2rem 0 0; font-weight: 400; font-size: 1.7em; }
+
+/* Title bar, always at the top of the viewport. */
+#topbar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--player-bg);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--rule);
+}
+.topbar-inner {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0.45rem 16px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.eyebrow { color: var(--muted); letter-spacing: 0.06em; font-size: 0.85em; white-space: nowrap; }
+#book-select {
+  font: inherit;
+  font-size: 1.05em;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.1rem 0.3rem;
+  cursor: pointer;
+}
+#book-select:hover, #book-select:focus { border-color: var(--rule); outline: none; }
+#to-start {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font: 13px system-ui, sans-serif;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  cursor: pointer;
+}
+#to-start:hover { color: var(--text); border-color: var(--current-bar); }
+.credits { text-align: center; margin-bottom: 1rem; }
 
 #verses { list-style: none; margin: 0; padding: 0; }
 .credit { margin: 0.4rem 0 0; color: var(--muted); font-family: system-ui, sans-serif; font-size: 12px; }
@@ -236,30 +278,92 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   border-top: 1px solid var(--rule);
   padding: 0.6rem 16px calc(0.6rem + env(safe-area-inset-bottom));
 }
-#player audio { display: block; width: 100%; max-width: 44rem; margin: 0 auto; }
-.controls {
+#player audio { display: none; }
+
+/* Media bar: verse steps, play/pause, line box, timeline and volume. */
+.transport {
   max-width: 44rem;
-  margin: 0.35rem auto 0;
+  margin: 0 auto;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.45rem;
   font-family: system-ui, sans-serif;
   font-size: 14px;
   color: var(--muted);
 }
-.controls button {
-  font: inherit;
-  font-size: 18px;
-  line-height: 1;
-  width: 2rem; height: 2rem;
+.tbtn {
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--rule);
   border-radius: 50%;
-  background: transparent;
-  color: var(--text);
+  background: var(--bg);
+  color: var(--muted);
   cursor: pointer;
 }
-.controls button:hover { border-color: var(--current-bar); }
+.tbtn:hover { color: var(--text); border-color: var(--current-bar); }
+.tbtn.play { width: 2.7rem; height: 2.7rem; color: var(--bg); background: var(--current-bar); border-color: var(--current-bar); }
+.tbtn.play:hover { color: var(--bg); filter: brightness(1.08); }
+.tbtn.bare { border-color: transparent; background: transparent; }
+.play .icon-pause, body.playing .play .icon-play { display: none; }
+body.playing .play .icon-pause { display: block; }
+
+.timeline { flex: 1; min-width: 9rem; display: flex; align-items: center; gap: 0.45rem; }
+.time { font-variant-numeric: tabular-nums; font-size: 12.5px; min-width: 2.6rem; text-align: center; }
+
+/* Range inputs (seek and volume): thin track filled up to the thumb (--pct). */
+#seek, #volume {
+  --pct: 0%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--current-bar) var(--pct), var(--rule) var(--pct));
+  cursor: pointer;
+  margin: 0;
+}
+#seek { flex: 1; min-width: 0; }
+#volume { width: 4.5rem; }
+#seek::-webkit-slider-thumb, #volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--current-bar); border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--current-bar);
+}
+#seek::-moz-range-thumb, #volume::-moz-range-thumb {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: var(--current-bar); border: 2px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--current-bar);
+}
+#seek:focus-visible, #volume:focus-visible { outline: 2px solid var(--current-bar); outline-offset: 4px; }
+
+.volume { flex: none; display: inline-flex; align-items: center; gap: 0.1rem; }
+#mute .vol-x, body.muted #mute .vol-waves { display: none; }
+body.muted #mute .vol-x { display: inline; }
+
+.controls {
+  max-width: 44rem;
+  margin: 0.45rem auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Narrow screens: the timeline gets a row of its own. */
+@media (max-width: 600px) {
+  .transport { flex-wrap: wrap; }
+  .timeline { order: 5; flex-basis: 100%; }
+  .volume { margin-left: auto; }
+}
+
 #position {
   width: 6.5rem;
   padding: 0.2rem 0.3rem;
@@ -276,12 +380,11 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 #position:focus { outline: none; border-color: var(--current-bar); color: var(--text); background: var(--bg); }
 #position.invalid { border-color: #c0392b; }
 .toggle { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
-.toggle.push { margin-left: auto; }
 
 /* Focused mode: only the current verse (large, centred) and its neighbours. */
-body.focused header { display: none; }
+body.focused .credits { display: none; }
 body.focused main {
-  min-height: calc(100vh - 7.5rem);
+  min-height: calc(100vh - 10.5rem);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -296,6 +399,41 @@ body.focused .verse.f-prev,
 body.focused .verse.f-next { opacity: 0.4; pointer-events: none; }
 body.focused .verse.f-cur { font-size: 1.3em; margin: 1.4rem 0; padding-top: 0.5rem; padding-bottom: 0.6rem; }
 body.focused .verse.f-cur .num { visibility: visible; }
+
+/* Focused mode: previous / play-pause / next, stacked beside the current verse. */
+#focus-controls { display: none; }
+body.focused .verse.f-cur > #focus-controls {
+  position: absolute;
+  left: -3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 16px;
+}
+#focus-controls button {
+  width: 2.1rem;
+  height: 2.1rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+#focus-controls button:hover { color: var(--text); border-color: var(--current-bar); }
+#fc-play { color: var(--current-bar); }
+#fc-play .icon-pause, body.playing #fc-play .icon-play { display: none; }
+body.playing #fc-play .icon-pause { display: block; }
+body.focused .verse.f-cur .seek-icon { display: none; }
+/* Too narrow for the left margin: put the controls in the line-number column. */
+@media (max-width: 52rem) {
+  body.focused .verse.f-cur > #focus-controls { left: 0.2rem; }
+  body.focused .verse.f-cur .num { visibility: hidden; }
+}
 
 @media (max-width: 520px) {
   body { font-size: 19px; }

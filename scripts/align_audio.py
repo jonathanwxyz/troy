@@ -183,7 +183,7 @@ def main():
         import uroman as ur
         uroman = ur.Uroman()
 
-    cache = args.audio.parent / "cache" / f"{args.audio.stem}.{args.model}.npy"
+    cache = args.audio.parent / "cache" / f"{args.audio.name}.{args.model}.npy"  # e.g. iliad01.m4a.mms.npy
     t0 = time.time()
     if cache.exists():
         lp = np.load(cache)

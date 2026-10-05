@@ -20,6 +20,8 @@ const holdOnHover = document.getElementById("hold-on-hover");
 const focused = document.getElementById("focused");
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
+const focusControls = document.getElementById("focus-controls");
+const bookSelect = document.getElementById("book-select");
 
 let verses = [];   // {line, text, start, speechEnd, end, el}, timed ones in recording order
 let current = -1;  // index into verses
@@ -34,7 +36,7 @@ let heldBy = null;    // verse we paused at because it was hovered
 let released = null;  // verse the reader resumed by hand while hovering: don't hold it again
 
 function render(data) {
-  document.getElementById("book-title").textContent = `Ῥαψῳδία ${GREEK_NUMERALS[data.book] || data.book}`;
+  bookSelect.value = String(data.book);
   document.title = `Iliad ${data.book} — Reader`;
   if (data.audio) audio.src = data.audio;
 
@@ -163,6 +165,7 @@ function setFocus(i) {
   verses[i - 1]?.el.classList.add("f-prev");
   verses[i]?.el.classList.add("f-cur");
   verses[i + 1]?.el.classList.add("f-next");
+  if (verses[i]) verses[i].el.append(focusControls);
   if (!animate) return;
 
   const now = [i - 1, i, i + 1].map((k) => verses[k]?.el).filter(Boolean);
@@ -222,9 +225,12 @@ function update() {
     activePassage = p;
     p?.el.classList.add("active");
   }
+  if (i >= 0) holdIfHovered(verses[i], t);
+  skipSilence(i, t);
+  document.body.classList.toggle("playing", isPlaying());
+  showTimeline(audio.currentTime);
   if (i >= 0) {
     const v = verses[i];
-    holdIfHovered(v, t);
     v.el.classList.toggle("pausing", t >= v.speechEnd);
     showPosition((v.line === 0 ? "title" : `${BOOK}.${v.line}`) + (heldBy === v ? " · held" : ""));
   } else {
@@ -244,6 +250,30 @@ function holdIfHovered(v, t) {
 function clearHold() {
   heldBy?.el.classList.remove("held");
   heldBy = null;
+}
+
+// A hover-hold is not a pause: logically the recording is still playing and will go on
+// when the pointer moves off. Pressing pause during a hold makes it a real pause instead.
+function isPlaying() {
+  return !audio.paused || heldBy !== null;
+}
+
+function togglePlay() {
+  if (heldBy) { clearHold(); update(); }  // stay stopped; moving off the word won't resume
+  else if (audio.paused) audio.play();
+  else audio.pause();
+}
+
+// Long silences (paragraph breaks, the lead-in of a recording) are cut short: once the
+// pause after a verse has lasted GAP_KEEP, playback jumps to LEAD_IN before the next verse.
+const GAP_KEEP = 0.9;  // seconds of silence kept after a verse
+const LEAD_IN = 0.35;  // seconds of silence kept before the next verse
+function skipSilence(i, t) {
+  if (audio.paused || !verses.length) return;
+  const next = verses[i + 1];
+  if (!next) return;
+  const quietSince = i >= 0 ? verses[i].speechEnd : 0;
+  if (t > quietSince + GAP_KEEP && next.start - t > LEAD_IN + 0.15) audio.currentTime = next.start - LEAD_IN;
 }
 
 function seekTo(i, { play = true } = {}) {
@@ -294,10 +324,12 @@ function tick() {
 }
 audio.addEventListener("play", () => {
   if (heldBy) { released = heldBy; clearHold(); }  // resumed by hand while still hovering
+  update();
   requestAnimationFrame(tick);
 });
 audio.addEventListener("seeked", update);
 audio.addEventListener("timeupdate", update);
+audio.addEventListener("pause", update);
 
 // Paraphrase toggle, remembered per browser (storage may be unavailable).
 function applyParaphrase() {
@@ -452,7 +484,7 @@ document.getElementById("card-close").addEventListener("click", closeCard);
 // clicks in the player bar leave it open). On the text, that click only closes the card:
 // it doesn't also jump the audio.
 document.addEventListener("click", (e) => {
-  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player")) return;
+  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player, #focus-controls")) return;
   closeCard();
   if (list.contains(e.target)) {
     e.stopPropagation();
@@ -498,27 +530,152 @@ for (const ev of ["wheel", "touchmove"]) {
   window.addEventListener(ev, () => { lastUserScroll = Date.now(); }, { passive: true });
 }
 
-document.getElementById("prev").addEventListener("click", () => {
+// Stepping keeps the play state: a paused reader stays paused on the new verse.
+function stepBack() {
   // Within the first 1.5 s of a verse, go to the previous one; otherwise restart this one.
   const i = verseAt(audio.currentTime);
-  seekTo(i > 0 && audio.currentTime - verses[i].start < 1.5 ? i - 1 : Math.max(i, 0));
+  seekTo(i > 0 && audio.currentTime - verses[i].start < 1.5 ? i - 1 : Math.max(i, 0), { play: isPlaying() });
+}
+function stepForward() {
+  seekTo(Math.min(verseAt(audio.currentTime) + 1, verses.length - 1), { play: isPlaying() });
+}
+document.getElementById("prev").addEventListener("click", stepBack);
+document.getElementById("next").addEventListener("click", stepForward);
+
+// Focused-mode controls live inside the current row: keep their clicks from seeking it.
+for (const [id, action] of [["fc-prev", stepBack], ["fc-play", togglePlay], ["fc-next", stepForward]]) {
+  document.getElementById(id).addEventListener("click", (e) => { e.stopPropagation(); action(); });
+}
+
+// Media bar: play/pause (hover-hold aware), timeline and volume.
+const seek = document.getElementById("seek");
+const timeNow = document.getElementById("time-now");
+const timeTotal = document.getElementById("time-total");
+const volume = document.getElementById("volume");
+let seeking = false;  // the timeline thumb is being dragged
+
+function fmtTime(s) {
+  if (!Number.isFinite(s)) return "0:00";
+  s = Math.max(0, Math.floor(s));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
+function fillRange(input) {
+  const max = Number(input.max) || 1;
+  input.style.setProperty("--pct", `${(Number(input.value) / max) * 100}%`);
+}
+function showTimeline(t) {
+  if (!seeking) seek.value = t;
+  timeNow.textContent = fmtTime(seeking ? Number(seek.value) : t);
+  fillRange(seek);
+}
+
+document.getElementById("play").addEventListener("click", togglePlay);
+audio.addEventListener("durationchange", () => {
+  seek.max = audio.duration || 0;
+  timeTotal.textContent = fmtTime(audio.duration);
+  showTimeline(audio.currentTime);
 });
-document.getElementById("next").addEventListener("click", () => seekTo(verseAt(audio.currentTime) + 1));
+seek.addEventListener("input", () => { seeking = true; showTimeline(audio.currentTime); });
+seek.addEventListener("change", () => {
+  seeking = false;
+  clearHold();
+  released = null;
+  audio.currentTime = Number(seek.value);
+  lastUserScroll = 0;
+  update();
+});
+
+function showVolume() {
+  volume.value = audio.muted ? 0 : audio.volume;
+  fillRange(volume);
+  document.body.classList.toggle("muted", audio.muted || audio.volume === 0);
+}
+volume.addEventListener("input", () => {
+  audio.volume = Number(volume.value);
+  audio.muted = audio.volume === 0;
+});
+document.getElementById("mute").addEventListener("click", () => {
+  if (audio.volume === 0) audio.volume = 0.5;  // unmuting from zero: make it audible
+  audio.muted = !audio.muted;
+});
+audio.addEventListener("volumechange", () => {
+  showVolume();
+  try { localStorage.setItem("volume", JSON.stringify({ v: audio.volume, m: audio.muted })); } catch {}
+});
+try {
+  const saved = JSON.parse(localStorage.getItem("volume"));
+  if (saved) { audio.volume = saved.v; audio.muted = saved.m; }
+} catch {}
+showVolume();
+
+// Buttons don't keep keyboard focus after a click, so Space stays play/pause (rather
+// than pressing the last-clicked button again on top of it).
+for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle")) {
+  b.addEventListener("mousedown", (e) => e.preventDefault());
+}
+
+// Back to the beginning of the book (keeps the play state).
+document.getElementById("to-start").addEventListener("click", () => {
+  seekTo(0, { play: isPlaying() });
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+// Book picker.
+for (let b = 1; b <= 24; b++) bookSelect.add(new Option(`Ῥαψῳδία ${GREEK_NUMERALS[b]}`, String(b)));
+bookSelect.value = String(BOOK);
+bookSelect.addEventListener("change", () => {
+  savePlace();
+  location.search = `?book=${bookSelect.value}`;
+});
 
 document.addEventListener("keydown", (e) => {
-  if (e.target.closest?.("input, textarea, audio")) return;
-  if (e.key === " ") { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
-  else if (e.key === "ArrowLeft") { e.preventDefault(); document.getElementById("prev").click(); }
-  else if (e.key === "ArrowRight") { e.preventDefault(); document.getElementById("next").click(); }
+  // Typing in the line box is left alone; on a slider the arrow keys move the slider.
+  if (e.target.closest?.('input[type="text"], textarea, select')) return;
+  if (e.target.type === "range" && e.key.startsWith("Arrow")) return;
+  if (e.key === " ") { e.preventDefault(); togglePlay(); }
+  else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }
+  else if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); stepForward(); }
   else if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
     focused.checked = !focused.checked;
     applyFocused();
   }
 });
 
+// Remember where you were: the audio position per book, saved while listening and on
+// leaving, restored (paused) on the next visit. Storage may be unavailable.
+const PLACE_KEY = `place:book${BOOK}`;
+let restored = false;  // don't overwrite the saved place before it has been restored
+let lastSaved = 0;
+
+function savePlace() {
+  if (!restored || !Number.isFinite(audio.currentTime)) return;
+  try { localStorage.setItem(PLACE_KEY, audio.currentTime.toFixed(2)); } catch {}
+  lastSaved = Date.now();
+}
+
+function restorePlace() {
+  let t = NaN;
+  try { t = parseFloat(localStorage.getItem(PLACE_KEY)); } catch {}
+  const apply = () => {
+    if (t > 0 && (!audio.duration || t < audio.duration)) audio.currentTime = t;
+    restored = true;
+    update();
+    if (current >= 0 && !focused.checked) verses[current].el.scrollIntoView({ block: "center" });
+  };
+  // Setting currentTime before the audio's metadata is known may be ignored.
+  if (audio.readyState >= 1) apply();
+  else audio.addEventListener("loadedmetadata", apply, { once: true });
+}
+
+audio.addEventListener("timeupdate", () => { if (Date.now() - lastSaved > 3000) savePlace(); });
+for (const ev of ["pause", "seeked"]) audio.addEventListener(ev, savePlace);
+window.addEventListener("pagehide", savePlace);
+document.addEventListener("visibilitychange", () => { if (document.hidden) savePlace(); });
+
 fetch(`/api/book/${BOOK}`)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-  .then((data) => { render(data); update(); })
+  .then((data) => { render(data); update(); restorePlace(); })
   .catch((err) => {
     list.textContent = `Could not load book ${BOOK}: ${err.message}`;
   });
