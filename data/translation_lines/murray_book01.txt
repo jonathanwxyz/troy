@@ -1,0 +1,492 @@
+# Murray's Book 1 split into Greek lines. Each entry gives the first words of a
+# line's English inside its passage (translation_passages); a passage's first line
+# needs no entry. `-` means that line has no English of its own (merged with the
+# line before). Where Murray reorders, the cut follows the best fit.
+1.2 that destructive wrath
+1.3 and sent forth
+1.4 of heroes, and made
+1.5 and every bird
+1.7 Atreus' son, king
+1.8 Who then
+1.9 The son of Leto
+1.10 roused throughout
+1.12 For he had come
+1.13 to free his daughter
+1.14 and in his hands
+1.15 on a staff
+1.17 Sons of Atreus
+1.18 to you may the gods
+1.19 that you sack
+1.20 but my dear child
+1.22 Then all the rest
+1.23 to reverence the priest
+1.24 yet the thing
+1.25 but he sent him
+1.27 either tarrying
+1.28 lest your staff
+1.29 Her I will not
+1.30 in our house
+1.32 But go
+1.33 So he spoke, and the old
+1.34 He went forth
+1.35 and earnestly
+1.37 Hear me
+1.38 and holy Cilla
+1.39 Sminthian god
+1.40 or if ever I burned
+1.42 let the Danaans
+1.43 So he spoke in prayer
+1.44 Down from the peaks
+1.45 bearing on his shoulders
+1.47 as he moved
+1.48 Then he sat down
+1.49 terrible was
+1.50 The mules
+1.52 and struck
+1.53 For nine days
+1.54 but on the tenth
+1.55 for the goddess
+1.57 When they were
+1.58 among them arose and spoke
+1.59 Son of Atreus, now
+1.60 we shall return
+1.62 But come, let us
+1.63 or some reader
+1.64 who might say
+1.65 whether he finds
+1.67 and be willing
+1.68 When he had thus
+1.69 Calchas son
+1.70 who knew
+1.72 by his own
+1.73 He with good intent
+1.74 Achilles, dear to Zeus
+1.75 the wrath of Apollo
+1.77 that you will readily
+1.78 for I think
+1.79 over all the Argives
+1.80 For mightier
+1.82 yet afterwards
+1.83 Say then
+1.84 In answer to him
+1.85 Take heart
+1.87 when you reveal
+1.88 no one, while
+1.89 shall lay heavy
+1.90 no one of the whole
+1.92 Then the blameless
+1.93 It is not then
+1.94 but because of the priest
+1.95 and did not release
+1.97 He will not drive
+1.98 until we give back
+1.99 unbought
+1.100 to Chryse
+1.102 the warrior
+1.103 deeply troubled
+1.104 and his eyes
+1.105 To Calchas
+1.107 ever is evil
+1.108 but a word of good
+1.109 And now among
+1.110 that for this reason
+1.112 since I much
+1.113 to keep her
+1.114 my wedded wife
+1.115 either in form
+1.117 I would rather
+1.118 But provide
+1.119 of the Argives be
+1.120 For you all see
+1.122 Most glorious
+1.123 how shall the great
+1.124 We know nothing
+1.125 but whatever we took
+1.127 But give back
+1.128 will recompense
+1.129 grants us
+1.130 In answer to him
+1.132 seek to deceive
+1.133 Are you willing
+1.134 for me to sit
+1.135 No, if the great
+1.137 but if they do not
+1.138 your prize
+1.139 I will seize
+1.140 But these things
+1.142 and quickly gather
+1.143 and place on board
+1.144 Let one prudent
+1.145 either Aias
+1.147 so that on our behalf
+1.148 Glaring from beneath
+1.149 Ah me
+1.150 how shall any man
+1.152 It was not on account
+1.153 that I came here
+1.154 Never have they
+1.155 nor ever in deep
+1.157 shadowy mountains
+1.158 But you, shameless
+1.159 seeking to win
+1.160 from the Trojans
+1.162 for which I toiled
+1.163 Never have I prize
+1.164 sack a well
+1.165 The brunt
+1.167 your prize is far
+1.168 I take to my ships
+1.169 Now I will go
+1.170 to return home
+1.172 Then the king
+1.173 Flee then
+1.174 to remain for my
+1.175 who will honour
+1.177 for always strife
+1.178 If you are very
+1.179 Go home
+1.180 and lord it
+1.182 as Phoebus
+1.183 her with my ship
+1.184 I will send back
+1.185 your prize, so that
+1.187 from declaring
+1.188 So he spoke. Grief
+1.189 his shaggy breast
+1.190 whether he should draw
+1.192 or stay his anger
+1.193 While he pondered
+1.194 and was drawing
+1.195 from heaven
+1.197 She stood behind
+1.198 appearing to him
+1.199 Achilles was seized
+1.200 Pallas Athene
+1.202 Why now
+1.203 Is it so that
+1.204 One thing I will
+1.205 through his own
+1.207 I have come from heaven
+1.208 The goddess white-armed
+1.209 for in her heart
+1.210 But come, cease
+1.212 For thus will I
+1.213 Hereafter three
+1.214 on account of this
+1.215 In answer to her
+1.217 however angered
+1.218 Whoever obeys
+1.219 He spoke, and stayed
+1.220 and back into
+1.222 to the palace
+1.223 But the son of Peleus
+1.224 the son of Atreus, and in no
+1.225 Heavy with wine
+1.227 or go forth
+1.228 That seems
+1.229 Indeed it is far
+1.230 to deprive
+1.232 else, son of Atreus
+1.233 But I will speak
+1.234 by this staff
+1.235 since first it left
+1.237 of leaves and bark
+1.238 carry it in their
+1.239 that come from Zeus
+1.240 Surely some day
+1.242 to help them
+1.243 shall fall dying
+1.244 in anger that you
+1.245 So spoke the son
+1.247 while over against
+1.248 Then among them arose Nestor
+1.249 from whose tongue
+1.250 Two generations
+1.252 in sacred Pylos
+1.253 He with good intent
+1.254 Comrades
+1.255 Truly would
+1.257 were they to hear
+1.258 you who are chief
+1.259 Listen to me
+1.260 In earlier times
+1.262 Such warriors
+1.263 as Peirithous
+1.264 and Caeneus
+1.265 and Theseus
+1.267 mightiest were they
+1.268 the mountain
+1.269 With these men
+1.270 from a distant
+1.272 of the mortals
+1.273 Yes, and they
+1.274 So also
+1.275 Neither do you
+1.277 nor do you, son
+1.278 might against might
+1.279 of a sceptre
+1.280 If you are a stronger
+1.282 Son of Atreus, check
+1.283 I beg you
+1.284 for all the Achaeans a mighty
+1.285 In answer to him
+1.287 But this man
+1.288 over all he wishes
+1.289 and to all to give
+1.290 If the gods who exist
+1.292 Brilliant Achilles
+1.293 Surely I would
+1.294 if I am to yield
+1.295 On others
+1.297 And another thing
+1.298 with my hands
+1.299 either with you
+1.300 But of all else
+1.302 Come, just try
+1.303 forthwith will
+1.304 So when the two
+1.305 they rose
+1.307 together with
+1.308 but the son of Atreus launched
+1.309 and chose for it
+1.310 for the god, and brought
+1.312 So these embarked
+1.313 but the son of Atreus bade
+1.314 And they purified
+1.315 and offered to Apollo
+1.317 and the savour
+1.318 Thus were they
+1.319 did not cease
+1.320 but called to
+1.322 Go to the hut
+1.323 and take by the hand
+1.324 and if he give
+1.325 go with a larger
+1.327 Unwilling went
+1.328 and came to the tents
+1.329 Him they found
+1.330 and Achilles was not
+1.332 stood, and spoke
+1.333 but he knew
+1.334 Hail, heralds
+1.335 draw near
+1.337 But come, Patroclus
+1.338 and give her to them
+1.339 before the blessed
+1.340 and before him
+1.342 from the host
+1.343 and knows not
+1.344 that his Achaeans
+1.345 So he spoke, and Patroclus
+1.347 and gave her to them to lead away. So
+1.348 and with them
+1.349 burst into tears
+1.350 on the shore of the grey
+1.352 Mother, since
+1.353 honour surely
+1.354 Zeus who thunders
+1.355 Truly the son
+1.357 So he spoke, weeping
+1.358 as she sat
+1.359 And speedily
+1.360 and sat down before
+1.362 My child
+1.363 Speak out
+1.364 Then with heavy
+1.365 You know
+1.367 and laid it waste
+1.368 This the sons
+1.369 but for the son of Atreus they
+1.370 However, Chryses
+1.372 to free his daughter
+1.373 and in his hands
+1.374 on a staff
+1.375 but most of all
+1.377 to reverence
+1.378 yet the thing
+1.379 but he sent him
+1.380 So the old man
+1.382 and sent against
+1.383 began to die
+1.384 everywhere throughout
+1.385 with sure knowledge
+1.387 but thereafter
+1.388 and spoke a threatening
+1.389 For the quick
+1.390 to Chryse, and are
+1.392 the daughter of Briseus
+1.393 But, you
+1.394 go to Olympus
+1.395 you have gladdened
+1.397 and declaring
+1.398 that you alone
+1.399 on the day when
+1.400 even Hera
+1.402 when you had quickly
+1.403 whom the gods
+1.404 Aegaeon
+1.405 He sat down by
+1.407 Bring this now
+1.408 in hope that he might
+1.409 and for those others
+1.410 as they are slain
+1.412 his blindness
+1.413 Then Thetis
+1.414 Ah me, my child
+1.415 Would that
+1.417 but now you are doomed
+1.418 therefore to an evil
+1.419 Yet in order
+1.420 I will myself go
+1.422 and continue your wrath
+1.423 for Zeus went
+1.424 for a feast
+1.425 but on the twelfth
+1.427 and will clasp
+1.428 So saying, she
+1.429 angry at heart
+1.430 whom they had taken
+1.432 When they had arrived
+1.433 they furled
+1.434 and the mast
+1.435 with speed
+1.437 and themselves went
+1.438 They brought forth
+1.439 and forth stepped
+1.440 Her then did
+1.442 Chryses, Agamemnon
+1.443 to bring to you
+1.444 on the Danaans
+1.445 who has now brought
+1.447 his dear child
+1.448 around the well
+1.449 and then they washed
+1.450 Then Chryses lifted
+1.452 and holy Cilla
+1.453 As before
+1.454 to me you did
+1.455 even so now
+1.457 So he spoke in prayer
+1.458 Then, when they had prayed
+1.459 they first drew
+1.460 and cut out the thighs
+1.462 And the old man burned
+1.463 and beside him
+1.464 But when the thigh
+1.465 they cut up
+1.467 Then, when they had ceased
+1.468 they feasted
+1.469 But when they had put
+1.470 the youths filled
+1.472 So the whole day
+1.473 singing the beautiful
+1.474 hymning the god
+1.475 But when the sun set
+1.477 and as soon as
+1.478 then they set sail
+1.479 And Apollo
+1.480 and they set up
+1.482 sang loudly
+1.483 and she sped
+1.484 But when they came
+1.485 they drew the black
+1.487 and themselves scattered
+1.488 But he in his wrath
+1.489 the Zeus
+1.490 Never did he go
+1.492 as he tarried
+1.493 Now when the twelfth
+1.494 then into Olympus
+1.495 all in one company
+1.497 and at early morning
+1.498 There she found
+1.499 upon the topmost
+1.500 So she sat down
+1.502 and she spoke in prayer
+1.503 Father Zeus
+1.504 by word or deed
+1.505 do honour to my son
+1.507 has dishonoured him
+1.508 But honour him
+1.509 and give might
+1.510 do honour to my son, and
+1.512 but sat a long
+1.513 so held to him
+1.514 Give me your
+1.515 or else deny
+1.517 Then, greatly troubled
+1.518 Surely this will be
+1.519 with Hera, when
+1.520 Even now she
+1.522 But for the present
+1.523 and I will take
+1.524 Come, I will bow
+1.525 for this from me
+1.527 nor unfulfilled
+1.528 The son of Cronos spoke
+1.529 and the ambrosial
+1.530 immortal head
+1.532 she leapt
+1.533 and Zeus went to his own
+1.534 from their seats
+1.535 to await his coming
+1.537 saw, and failed
+1.538 silver-footed Thetis
+1.539 Forthwith then
+1.540 Who of the gods
+1.542 and to give judgments
+1.543 brought yourself
+1.544 In answer to her spoke the father
+1.545 Hera, do not
+1.547 Whatever it is fitting
+1.548 before you, whether
+1.549 but what I wish
+1.550 of all this
+1.552 Most dread
+1.553 Truly, in the past
+1.554 but at your ease
+1.555 But now I have
+1.557 for at early dawn
+1.558 To her, I think
+1.559 and bring many
+1.560 Then in answer
+1.562 yet you shall
+1.563 but shall be even
+1.564 If this thing
+1.565 Sit down in silence
+1.567 against my drawing
+1.568 He spoke, and ox
+1.569 and sat down in silence
+1.570 Then troubled
+1.572 doing pleasure
+1.573 Surely this will be sorry work, that
+1.574 if you two
+1.575 and set the gods
+1.577 And I give counsel
+1.578 to do pleasure to our
+1.579 the father upbraid
+1.580 What if the Olympian
+1.582 But address him
+1.583 so shall the Olympian
+1.584 So saying, he sprang
+1.585 and placed in his dear
+1.587 lest, dear as
+1.588 stricken
+1.589 to succour you
+1.590 On a time before
+1.592 the whole day long I
+1.593 I fell in Lemnos
+1.594 There the Sintian
+1.595 So he spoke, and the goddess
+1.597 Then he poured
+1.598 drawing forth
+1.599 And unquenchable
+1.600 as they saw
+1.602 they feasted, nor
+1.603 nor of the beauteous
+1.604 nor yet of the Muses
+1.605 But when the bright
+1.607 where for each
+1.608 with cunning skill
+1.609 and Zeus, the Olympian
+1.610 where of old

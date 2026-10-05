@@ -5,7 +5,11 @@
 
 Routes:
   /                    web/index.html (and other files under web/)
-  /api/book/<n>        JSON: title, audio URL and verses with their timings
+  /api/book/<n>        JSON: title, audio URL and verses (text, paraphrase, timings,
+                       and per-word paraphrase equivalents where aligned; Homeric words
+                       sharing a paraphrase word, e.g. a verb in tmesis, share a group id;
+                       Murray's English per line where split, else as ~5-line passages)
+  /api/word/<b>/<l>/<i>  JSON: treebank parse of word i (whitespace chunk) of verse b.l
   /audio/<file>        a file from recordings/, with HTTP Range support for seeking
 """
 import argparse
@@ -26,6 +30,9 @@ MODEL = "mms"
 mimetypes.add_type("audio/ogg", ".opus")
 mimetypes.add_type("audio/webm", ".webm")
 
+# Punctuation and editorial brackets around a paraphrase word, dropped in glosses.
+EDGE_PUNCT = re.compile(r"^[^\w’']+|[^\w’']+$")
+
 
 def book_json(book):
     con = sqlite3.connect(DB)
@@ -34,15 +41,114 @@ def book_json(book):
                       (book, MODEL)).fetchone()
     timing = {line: (start, speech_end, end) for line, start, speech_end, end in con.execute(
         "SELECT line, start, speech_end, end FROM verse_timings WHERE book = ? AND model = ?", (book, MODEL))}
-    rows = ([(0, title[0])] if title else []) + con.execute(
-        "SELECT line, homer FROM verses WHERE book = ? ORDER BY line", (book,)).fetchall()
+    rows = ([(0, title[0], None)] if title else []) + con.execute(
+        "SELECT line, homer, paraphrase FROM verses WHERE book = ? ORDER BY line", (book,)).fetchall()
+    # Homeric word -> its paraphrase words, keyed by the word's whitespace-chunk index.
+    glosses, sharers = {}, {}
+    for line, wi, para_line, para_index, word in con.execute(
+            "SELECT line, word_index, para_line, para_index, para_word FROM paraphrase_links "
+            "WHERE book = ? ORDER BY line, word_index, para_line, para_index", (book,)):
+        glosses.setdefault(line, {}).setdefault(wi, []).append(EDGE_PUNCT.sub("", word))
+        sharers.setdefault((para_line, para_index), set()).add((line, wi))
+    english = dict(con.execute(
+        "SELECT line, text FROM translation_lines WHERE translation = 'murray' AND book = ?", (book,)))
+    # Passages only where the lines aren't split yet.
+    translation = [{"from": a, "to": b, "text": t} for a, b, t in con.execute(
+        "SELECT line_from, line_to, text FROM translation_passages "
+        "WHERE translation = 'murray' AND book = ? ORDER BY line_from", (book,))
+        if not all(line in english for line in range(a, b + 1))]
     con.close()
+    groups = word_groups(sharers.values())
     if not rows:
         return None
-    verses = [{"line": line, "text": text,
-               **dict(zip(("start", "speechEnd", "end"), timing[line]))} if line in timing
-              else {"line": line, "text": text} for line, text in rows]
-    return {"book": book, "audio": f"/audio/{rec[0]}" if rec else None, "verses": verses}
+    verses = [{"line": line, "text": text, "paraphrase": paraphrase, "english": english.get(line),
+               **(dict(zip(("start", "speechEnd", "end"), timing[line])) if line in timing else {}),
+               **({"glosses": {i: " ".join(w) for i, w in glosses[line].items()}} if line in glosses else {}),
+               **({"groups": groups[line]} if line in groups else {})}
+              for line, text, paraphrase in rows]
+    return {"book": book, "audio": f"/audio/{rec[0]}" if rec else None, "verses": verses,
+            "translation": translation}
+
+
+# AGDT dependency labels; suffixes _CO (coordinated) and _AP (in apposition).
+RELATIONS = {
+    "PRED": "predicate", "SBJ": "subject", "OBJ": "object", "ATR": "attribute",
+    "ADV": "adverbial", "ATV": "complement", "AtvV": "complement", "PNOM": "predicate nominal",
+    "OCOMP": "object complement", "COORD": "coordinator", "APOS": "apposition",
+    "AuxP": "preposition", "AuxC": "subordinating conjunction", "AuxY": "sentence particle",
+    "AuxZ": "emphasizing particle", "AuxV": "auxiliary verb", "AuxX": "comma", "AuxK": "end punctuation",
+    "AuxG": "bracket", "ExD": "external (e.g. vocative, ellipsis)", "XSEG": "word fragment",
+}
+
+
+def relation_label(rel):
+    if not rel:
+        return None
+    base, *suffixes = rel.split("_")
+    label = RELATIONS.get(base, base)
+    if "AP" in suffixes:
+        label += ", in apposition"
+    if "CO" in suffixes:
+        label += ", coordinated"
+    return label
+
+
+def word_json(book, line, index):
+    con = sqlite3.connect(DB)
+    verse = con.execute("SELECT homer FROM verses WHERE book = ? AND line = ?", (book, line)).fetchone()
+    if not verse or not 0 <= index < len(verse[0].split(" ")):
+        return None
+    gloss = [w for (w,) in con.execute(
+        "SELECT para_word FROM paraphrase_links WHERE book = ? AND line = ? AND word_index = ? "
+        "ORDER BY para_line, para_index", (book, line, index))]
+    tokens = []
+    for (form, lemma, definition, pos, person, number, tense, mood, voice, gender, case, degree,
+         relation, head, sentence_id, match) in con.execute(
+            "SELECT t.form, t.lemma, d.definition, t.pos, t.person, t.number, t.tense, t.mood, t.voice, "
+            "t.gender, t.gram_case, t.degree, t.relation, t.head, t.sentence_id, w.match "
+            "FROM word_links w JOIN tokens t ON t.seq = w.token_seq "
+            "LEFT JOIN lemma_defs d ON d.lemma = t.lemma "
+            "WHERE w.book = ? AND w.line = ? AND w.word_index = ? ORDER BY t.seq", (book, line, index)):
+        head_word = con.execute("SELECT form, artificial FROM tokens WHERE sentence_id = ? AND word_id = ?",
+                                (sentence_id, head)).fetchone() if head else None
+        tokens.append({
+            "form": form, "lemma": lemma, "definition": definition, "match": match,
+            # Verbs read "3rd singular aorist indicative active", nominals "feminine singular accusative".
+            "morph": [m for m in ((pos, person, number, tense, mood, voice, gender, case, degree) if person
+                                  else (pos, tense, mood, voice, gender, number, case, degree)) if m],
+            "relation": relation, "role": relation_label(relation),
+            "head": None if not head else "(implied word)" if head_word and head_word[1] else
+                    head_word[0] if head_word else None,
+            "root": head == 0,
+        })
+    con.close()
+    return {"word": verse[0].split(" ")[index], "gloss": " ".join(EDGE_PUNCT.sub("", w) for w in gloss) or None,
+            "tokens": tokens}
+
+
+def word_groups(sharer_sets):
+    """Join Homeric words (line, word_index) that share any paraphrase word into
+    groups (union-find). Returns {line: {word_index: group_id}} for groups of 2+."""
+    parent = {}
+
+    def find(x):
+        while parent.setdefault(x, x) != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for words in sharer_sets:
+        first, *rest = words
+        for w in rest:
+            parent[find(w)] = find(first)
+    members = {}
+    for w in parent:
+        members.setdefault(find(w), []).append(w)
+    out = {}
+    for gid, ws in enumerate(m for m in members.values() if len(m) > 1):
+        for line, wi in ws:
+            out.setdefault(line, {})[wi] = gid
+    return out
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -51,19 +157,23 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if m := re.fullmatch(r"/api/book/(\d+)", self.path):
-            data = book_json(int(m[1]))
-            if data is None:
-                return self.send_error(HTTPStatus.NOT_FOUND)
-            body = json.dumps(data, ensure_ascii=False).encode()
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
+            self.send_json(book_json(int(m[1])))
+        elif m := re.fullmatch(r"/api/word/(\d+)/(\d+)/(\d+)", self.path):
+            self.send_json(word_json(*map(int, m.groups())))
         elif self.path.startswith("/audio/"):
             self.send_audio(RECORDINGS / Path(self.path[len("/audio/"):]).name)
         else:
             super().do_GET()
+
+    def send_json(self, data):
+        if data is None:
+            return self.send_error(HTTPStatus.NOT_FOUND)
+        body = json.dumps(data, ensure_ascii=False).encode()
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_audio(self, path):
         """Serve a recording, honouring a single byte Range (browsers seek with these)."""

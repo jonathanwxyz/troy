@@ -14,6 +14,7 @@
   <header>
     <p class="eyebrow">Ὁμήρου Ἰλιάς</p>
     <h1 id="book-title"></h1>
+    <p class="credit" id="translation-credit">English: A. T. Murray (Loeb, 1924), via Perseus</p>
   </header>
   <ol id="verses" aria-live="off"></ol>
 </main>
@@ -24,10 +25,19 @@
     <button id="prev" title="Previous verse (←)" aria-label="Previous verse">‹</button>
     <span id="position">—</span>
     <button id="next" title="Next verse (→)" aria-label="Next verse">›</button>
-    <label class="follow"><input type="checkbox" id="follow" checked> follow</label>
+    <label class="toggle push" title="Pause at the end of the verse the pointer is on; resume when it moves off"><input type="checkbox" id="hold-on-hover"> pause on hover</label>
+    <label class="toggle"><input type="checkbox" id="show-paraphrase" checked> paraphrase</label>
+    <label class="toggle"><input type="checkbox" id="show-translation"> translation</label>
+    <label class="toggle"><input type="checkbox" id="follow" checked> follow</label>
   </div>
 </footer>
 
+<div id="gloss" role="tooltip" hidden></div>
+
+<aside id="card" hidden aria-live="polite">
+  <button id="card-close" aria-label="Close">×</button>
+  <div id="card-body"></div>
+</aside>
 <script src="app.js"></script>
 </body>
 </html>

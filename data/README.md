@@ -15,7 +15,12 @@ Run in this order; each script replaces only its own tables. Pages are cached in
 4. `scripts/import_paraphrase_alignment.py` → `paraphrase_links`, from the hand-made
    files in `paraphrase_alignment/` (`-v` lists Gaza's unaligned additions)
 
-5. `.venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus`
+5. `scripts/import_shortdefs.py` → `shortdefs`, `lemma_defs` (English short definitions;
+   after step 2)
+6. `scripts/import_translation.py` → `translation_passages` (Murray's English), then
+   `scripts/import_translation_lines.py` → `translation_lines` (split per line, from
+   `translation_lines/murray_book01.txt`)
+7. `.venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus`
    → `verse_timings` (setup in `requirements-audio.txt`; recordings stay local, see
    `.gitignore`)
 
@@ -55,6 +60,27 @@ another (link precision/recall, per-word agreement).
   Gaza moves words across a line break, `para_line` differs from `line`. The source
   format is described at the top of `paraphrase_alignment/book01.txt`.
 
+- **shortdefs** `lemma`: the Perseus/Logeion short English definitions
+  ([helmadik/shortdefs](https://github.com/helmadik/shortdefs), ~100k Greek lemmas; no
+  licence stated, its README asks for credit to Perseus and Logeion).
+- **lemma_defs** `lemma`: a definition for each treebank lemma (`tokens.lemma`), with the
+  list `entry` it came from and how it was matched: `exact`, `alias`
+  (`lemma_aliases.tsv`: Homeric/variant spellings, plus an own definition for ἕ),
+  `no_diacritics` (Πηλείδης ~ Πηλεΐδης) or `accents` (ποτέ ~ ποτε). Covers 99.4% of
+  Book 1's words and 99.0% of the Iliad's; unmatched are mostly names (Μηριόνης) and
+  Homeric forms (ἱρός, εἷος) — add them to `lemma_aliases.tsv`.
+- **translation_passages** `(translation, book, line_from)`: A. T. Murray's prose
+  translation (Loeb, 1924; public domain) from Perseus (`perseus-eng3`, encoding CC BY-SA
+  4.0). Perseus marks the Greek line numbers every 5 lines, so each row covers ~5 lines
+  and is not split per verse. In Book 1 its markers stand at the end of their line
+  (passages 1–5, 6–10, …), in Books 2–24 at the start (1–4, 5–9, …); the importer detects
+  this per book from where sentences end (see `import_translation.py`). Its markers have three slips, merged into the
+  preceding passage: 2.720 repeated, 13.825 after 13.830, 20.1 repeated.
+- **translation_lines** `(translation, book, line)`: Murray split into single Greek
+  lines (Book 1 so far). The split points are hand-made: `translation_lines/murray_book01.txt`
+  gives the first words of each line's English; the importer checks the pieces rejoin
+  to the passage exactly. Where Murray reorders clauses across lines the cut is the
+  best fit, so a line's English can carry a word or two belonging to its neighbour.
 - **verse_timings** `(recording, model, book, line)`: where each verse is in a
   recording, in seconds. `line` 0 is the spoken title (`books.title`). `start` = first
   sound, `speech_end` = last sound, `end` = next verse's start (so `end - speech_end` is

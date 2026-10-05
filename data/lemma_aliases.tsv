@@ -1,0 +1,13 @@
+lemma	see	definition
+# Treebank lemmas whose entry in the short-definition list is spelled differently
+# (Homeric or Ionic form, AGDT variant). Give either `see` (a lemma in the list) or
+# `definition` (our own, only where the list has no suitable entry).
+κεῖνος	ἐκεῖνος	
+ἠέλιος	ἥλιος	
+μίγνυμι	μείγνυμι	
+προσεῖπον	πρόσφημι	
+Ποσειδεών	Ποσειδῶν	
+Θήβη	Θῆβαι	
+Κλυταιμνήστρη	Κλυταιμνήστρα	
+ἀργυρόπεζος	ἀργυρόπεζα	
+ἕ		him, her, it (3rd person pronoun, acc.; gen. οὗ, dat. οἷ)
