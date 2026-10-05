@@ -6,6 +6,9 @@ translation = 'polylas').
 Polylas renders the Iliad line for line, and Wikisource marks every fifth line with
 {{r|n}}. A book is loaded only if it has as many lines as the Greek (verses table)
 and every marker n sits on its n-th line; other books are reported and skipped.
+Within a 5-line block he sometimes drifts by a line or swaps two; hand-made
+corrections in data/translation_lines/polylas_book<NN>.txt (`book.line = polylas
+lines` or `-`) fix those, and every Polylas line must then be used exactly once.
 Raw wikitext is cached in data/raw/polylas/.
 """
 import html
@@ -19,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw" / "polylas"
+CORRECTIONS = ROOT / "data" / "translation_lines"
 DB = ROOT / "data" / "iliad.sqlite"
 TRANSLATION = "polylas"
 PAGE = "Ιλιάδα (Πολυλάς)/{}"
@@ -55,6 +59,22 @@ def verse_lines(wikitext):
     return out
 
 
+def read_corrections(book):
+    """{greek line: [polylas lines]} from polylas_book<NN>.txt, if present."""
+    path = CORRECTIONS / f"polylas_book{book:02d}.txt"
+    out = {}
+    if path.exists():
+        for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            s = raw.strip()
+            if not s or s.startswith("#"):
+                continue
+            m = re.fullmatch(r"(\d+)\.(\d+)\s*=\s*(-|[\d\s]+)", s)
+            if not m or int(m[1]) != book:
+                sys.exit(f"{path.name}:{n}: can't read {raw!r}")
+            out[int(m[2])] = [] if m[3] == "-" else [int(x) for x in m[3].split()]
+    return out
+
+
 def main():
     con = sqlite3.connect(DB)
     greek_lines = dict(con.execute("SELECT book, count(*) FROM verses GROUP BY book"))
@@ -66,8 +86,16 @@ def main():
             report.append(f"book {book:2}: skipped — {len(lines)} lines vs {greek_lines[book]} Greek"
                           + (f"; first misplaced marker {misplaced[0][1]} on line {misplaced[0][0]}" if misplaced else ""))
             continue
-        rows += [(TRANSLATION, book, i, text) for i, (text, _) in enumerate(lines, 1)]
-        report.append(f"book {book:2}: {len(lines)} lines")
+        fixes = read_corrections(book)
+        mapping = {g: fixes.get(g, [g]) for g in range(1, len(lines) + 1)}
+        used = sorted(p for ps in mapping.values() for p in ps)
+        if used != list(range(1, len(lines) + 1)):
+            dup = sorted({p for p in used if used.count(p) > 1})
+            missing = sorted(set(range(1, len(lines) + 1)) - set(used))
+            sys.exit(f"book {book}: corrections use Polylas lines {dup} twice and {missing} not at all")
+        rows += [(TRANSLATION, book, g, " ".join(lines[p - 1][0] for p in ps) or None)
+                 for g, ps in mapping.items()]
+        report.append(f"book {book:2}: {len(lines)} lines" + (f", {len(fixes)} corrected" if fixes else ""))
 
     con.executescript(
         """

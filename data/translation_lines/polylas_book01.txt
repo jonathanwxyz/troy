@@ -1,0 +1,35 @@
+# Corrections to Polylas's line-for-line Book 1: `Greek line = Polylas line(s)`.
+# Unlisted Greek lines take the Polylas line with the same number; `-` means none
+# (its sense is folded into a neighbouring line). Only real drifts (Polylas a whole
+# line ahead or behind) and clean swaps of two lines are corrected; ordinary
+# enjambment, where a phrase crosses the line break, is left alone.
+
+# 16 folded into his 16 (the address); his 16-19 render Greek 17-20
+1.16 = -
+1.17 = 16
+1.18 = 17
+1.19 = 18
+1.20 = 19 20
+
+# "Patroclus obeyed his comrade" (345) left out; his 345-347 render Greek 346-347
+1.345 = -
+1.346 = 345
+1.347 = 346 347
+
+# two lines in reverse order
+1.526 = 527
+1.527 = 526
+1.537 = 538
+1.538 = 537
+1.571 = 572
+1.572 = 571
+1.580 = 581
+1.581 = 580
+1.597 = 598
+1.598 = 597
+
+# 606-607 fitted into his 605-606; his 607-610 render Greek 608-610
+1.607 = -
+1.608 = 607
+1.609 = 608
+1.610 = 609 610

@@ -87,8 +87,11 @@ another (link precision/recall, per-word agreement).
   line count, and Wikisource marks every 5th line, so lines are taken one for one. A
   book is loaded only if its line count matches the Greek and every marker sits on its
   line: Books 1, 3, 4, 9, 10, 12, 15–17, 20–23 pass; the rest are skipped (a line more or
-  less, or a misplaced marker). Within a 5-line block Polylas sometimes merges or splits
-  lines, so a line can carry the sense of its neighbour (e.g. his 1.16 renders Greek 1.17).
+  less, or a misplaced marker). Within a 5-line block Polylas sometimes drifts a line or
+  swaps two; `translation_lines/polylas_book01.txt` corrects Book 1 (22 lines: 1.16–20,
+  345–347, 607–610, and swapped pairs 526/7, 537/8, 571/2, 580/1, 597/8). Lines whose
+  sense he folds into a neighbour (1.16, 345, 607) have no text. Ordinary enjambment is
+  left as is; other books are uncorrected.
 - **verse_timings** `(recording, model, book, line)`: where each verse is in a
   recording, in seconds. `line` 0 is the spoken title (`books.title`). `start` = first
   sound, `speech_end` = last sound, `end` = next verse's start (so `end - speech_end` is
