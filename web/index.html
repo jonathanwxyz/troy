@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="grc">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iliad Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Ὁμήρου Ἰλιάς</p>
+    <h1 id="book-title"></h1>
+  </header>
+  <ol id="verses" aria-live="off"></ol>
+</main>
+
+<footer id="player">
+  <audio id="audio" controls preload="metadata"></audio>
+  <div class="controls">
+    <button id="prev" title="Previous verse (←)" aria-label="Previous verse">‹</button>
+    <span id="position">—</span>
+    <button id="next" title="Next verse (→)" aria-label="Next verse">›</button>
+    <label class="follow"><input type="checkbox" id="follow" checked> follow</label>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
