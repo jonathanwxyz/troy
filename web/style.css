@@ -183,10 +183,16 @@ body:not(.show-translation) .verse .en { display: none; }
 body.hide-paraphrase .verse .para { display: none; }
 body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 .w { border-radius: 3px; transition: background-color 80ms ease; }
-.w[data-gloss]:hover,
 .w.linked {
   background: color-mix(in srgb, var(--current-bar) 22%, transparent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--current-bar) 22%, transparent);
+}
+/* Only where there is real hover: on touch a tap would leave the tint stuck. */
+@media (hover: hover) {
+  .w[data-gloss]:hover {
+    background: color-mix(in srgb, var(--current-bar) 22%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--current-bar) 22%, transparent);
+  }
 }
 
 .w { cursor: pointer; }
@@ -245,9 +251,9 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     max-height: calc(100vh - 11rem);
   }
 }
-/* Narrower screens: card as a sheet above the player. */
+/* Narrower screens: card floating above the selected word's line (placed by placeCard). */
 @media (max-width: 75.99rem) {
-  #card { left: 8px; right: 8px; bottom: 7.5rem; max-height: 45vh; }
+  #card { width: min(22rem, calc(100vw - 16px)); }
 }
 
 /* Scholia: the ancient notes on the current verse. */
@@ -340,18 +346,46 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     width: clamp(16rem, calc((100vw - 44rem) / 2 - 5rem), 26rem);
   }
 }
-/* Narrower: a sheet above the player, with room left below the text to scroll past it. */
+/* Narrower (no room for a column): no toggle; a button on each verse with scholia opens
+   them in a popup. */
+.sch-btn { display: none; }
 @media (max-width: 89.99rem) {
-  #scholia {
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(44rem, calc(100vw - 16px));
-    bottom: 7.5rem;
-    height: 38vh;
+  .toggle:has(#show-scholia) { display: none; }
+  .verse:has(.sch-btn) { padding-right: 2.1rem; }
+  .sch-btn {
+    position: absolute;
+    right: 0.15rem;
+    top: 0.3rem;
+    display: grid;
+    place-items: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    opacity: 0.55;
+    cursor: pointer;
   }
-  html:has(body.show-scholia) { scroll-padding-bottom: calc(7.5rem + 38vh); }
-  body.show-scholia main { padding-bottom: calc(9rem + 38vh); }
-  body.focused.show-scholia main { padding-bottom: calc(8.5rem + 38vh); }
+  .verse.current .sch-btn, .sch-btn:hover { opacity: 1; color: var(--current-bar); }
+  body.scholia-popup::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    background: rgba(0, 0, 0, 0.4);
+  }
+  body.scholia-popup #scholia {
+    z-index: 6;
+    top: 50%;
+    left: 50%;
+    width: min(40rem, calc(100vw - 16px));
+    max-height: calc(100vh - 2.5rem);
+    max-height: calc(100dvh - 2.5rem);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
+  }
 }
 
 #gloss {

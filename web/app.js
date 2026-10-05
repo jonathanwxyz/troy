@@ -5,6 +5,11 @@ const SEEK_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="
   '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>' +
   '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
   'd="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+// Below the width that fits the scholia column, a button on each verse with scholia opens
+// them in a popup instead.
+const SCHOLIA_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">' +
+  '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 5h16v11H10l-4 3.5V16H4z"/>' +
+  '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8 9h8M8 12.3h5"/></svg>';
 const GREEK_NUMERALS = ["", "Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ",
                         "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"];
 
@@ -72,6 +77,15 @@ function render(data) {
       li.append(icon);
     }
     li.append(num, text);
+    if (v.scholia) {
+      const b = document.createElement("button");
+      b.className = "sch-btn";
+      b.innerHTML = SCHOLIA_ICON;
+      b.title = `Scholia on line ${v.line} (${v.scholia})`;
+      b.setAttribute("aria-label", b.title);
+      b.addEventListener("click", (e) => { e.stopPropagation(); openScholiaPopup(v.line); });
+      li.append(b);
+    }
     if (v.paraphrase) {
       const para = document.createElement("span");
       para.className = "para";
@@ -232,6 +246,7 @@ function update() {
   skipSilence(i, t);
   document.body.classList.toggle("playing", isPlaying());
   showTimeline(audio.currentTime);
+  placeCard();  // the selected word may have moved (follow scroll, focused-mode steps)
   if (i >= 0) {
     const v = verses[i];
     v.el.classList.toggle("pausing", t >= v.speechEnd);
@@ -411,9 +426,13 @@ function renderScholia(data) {
   }
 }
 
-function showScholiaFor(v) {
-  if (!showScholia.checked || !v || v.line === scholiaShown) return;
-  const line = scholiaShown = v.line;
+// Screens too narrow for the scholia column use the per-verse buttons and a popup instead
+// of the toggle (the breakpoint matches style.css).
+const scholiaPopupMode = window.matchMedia?.("(max-width: 89.99rem)");
+const popupMode = () => !!scholiaPopupMode?.matches;
+
+function loadScholia(line) {
+  scholiaShown = line;
   scholiaLine.textContent = line ? `${BOOK}.${line}` : "";
   if (!line) {  // the spoken title
     scholiaBody.replaceChildren(el("p", "note", "The scholia begin at line 1."));
@@ -426,24 +445,64 @@ function showScholiaFor(v) {
     });
 }
 
+// The panel follows the current verse (toggle mode, wider screens).
+function showScholiaFor(v) {
+  if (!showScholia.checked || popupMode() || !v || v.line === scholiaShown) return;
+  loadScholia(v.line);
+}
+
+// Popup (narrower screens): pauses the recording, as reading them takes a while.
+function openScholiaPopup(line) {
+  if (heldBy) { clearHold(); update(); }
+  else if (!audio.paused) audio.pause();
+  closeCard();
+  document.body.classList.add("scholia-popup");
+  scholiaPanel.hidden = false;
+  loadScholia(line);
+}
+
+function closeScholia() {
+  if (document.body.classList.contains("scholia-popup")) {
+    document.body.classList.remove("scholia-popup");
+    applyScholia();
+  } else {
+    showScholia.checked = false;
+    applyScholia();
+  }
+}
+
 function applyScholia() {
-  document.body.classList.toggle("show-scholia", showScholia.checked);
-  scholiaPanel.hidden = !showScholia.checked;
+  const panel = showScholia.checked && !popupMode();
+  if (!popupMode()) document.body.classList.remove("scholia-popup");
+  document.body.classList.toggle("show-scholia", panel);
+  scholiaPanel.hidden = !panel && !document.body.classList.contains("scholia-popup");
   try { localStorage.setItem("showScholia", showScholia.checked ? "1" : "0"); } catch {}
-  scholiaShown = null;
-  if (showScholia.checked && focusIdx >= 0) showScholiaFor(verses[focusIdx]);
+  if (panel) {
+    scholiaShown = null;
+    if (focusIdx >= 0) showScholiaFor(verses[focusIdx]);
+  }
 }
 try { showScholia.checked = localStorage.getItem("showScholia") === "1"; } catch {}
 showScholia.addEventListener("change", applyScholia);
-document.getElementById("scholia-close").addEventListener("click", () => {
-  showScholia.checked = false;
-  applyScholia();
+scholiaPopupMode?.addEventListener?.("change", applyScholia);
+document.getElementById("scholia-close").addEventListener("click", closeScholia);
+// A tap outside the popup closes it (and does nothing else, e.g. doesn't seek).
+document.addEventListener("click", (e) => {
+  if (!document.body.classList.contains("scholia-popup") || scholiaPanel.contains(e.target)
+      || e.target.closest?.(".sch-btn")) return;
+  closeScholia();
+  e.stopPropagation();
+  e.preventDefault();
+}, true);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.body.classList.contains("scholia-popup")) closeScholia();
 });
 applyScholia();
 // A folded source opens with a click; its summary shouldn't keep focus (Space is play/pause).
 scholiaBody.addEventListener("mousedown", (e) => { if (e.target.closest("summary")) e.preventDefault(); });
 
-// Word glosses: hovering a Homeric word shows Gaza's equivalent.
+// Word glosses: hovering a Homeric word shows Gaza's equivalent. Not on touch: a tap opens
+// the card, which already has it.
 // Words sharing a paraphrase word (e.g. κατὰ … ἔκηα → κατέκαυσα) light up together.
 function linkGroup(w, on) {
   if (w.dataset.group == null) return;
@@ -454,9 +513,9 @@ function linkGroup(w, on) {
   }
 }
 
-list.addEventListener("mouseover", (e) => {
+list.addEventListener("pointerover", (e) => {
   const w = e.target.closest(".w");
-  if (!w || w.dataset.gloss == null) return;
+  if (!w || w.dataset.gloss == null || e.pointerType === "touch") return;
   linkGroup(w, true);
   gloss.textContent = w.dataset.gloss;
   gloss.classList.toggle("none", w.dataset.gloss === "—");
@@ -467,13 +526,13 @@ list.addEventListener("mouseover", (e) => {
   gloss.style.left = `${left + scrollX}px`;
   gloss.style.top = `${(above > 8 ? above : r.bottom + 8) + scrollY}px`;
 });
-list.addEventListener("mouseout", (e) => {
+list.addEventListener("pointerout", (e) => {
   const w = e.target.closest(".w");
   if (!w) return;
   linkGroup(w, false);
   if (!e.relatedTarget?.closest?.(".w")) gloss.hidden = true;
 });
-window.addEventListener("scroll", () => { gloss.hidden = true; }, { passive: true });
+window.addEventListener("scroll", () => { gloss.hidden = true; placeCard(); }, { passive: true });
 
 // Parsing card: clicking a word shows its treebank analysis (instead of seeking).
 let selected = null;
@@ -538,15 +597,39 @@ async function openCard(w) {
   selected = w;
   w.classList.add("selected");
   card.hidden = false;
+  placeCard();
   try {
     const r = await fetch(`/api/word/${BOOK}/${w.dataset.line}/${w.dataset.index}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
-    if (selected === w) renderCard(data);
+    if (selected === w) { renderCard(data); placeCard(); }
   } catch (err) {
     if (selected === w) cardBody.replaceChildren(el("p", "note", `Could not load: ${err.message}`));
   }
 }
+
+// Small and medium screens: the card floats just above the selected word's line (below
+// it when there is more room there), centred on the word and kept between the top bar
+// and the player. Wide screens keep it in the right-hand margin (CSS).
+const cardFloats = window.matchMedia?.("(max-width: 75.99rem)");
+const CARD_GAP = 8;  // px between the card and the line, and from the bars and edges
+function placeCard() {
+  if (card.hidden || !selected) return;
+  Object.assign(card.style, { left: "", top: "", maxHeight: "" });
+  if (!cardFloats?.matches) return;
+  const r = selected.getBoundingClientRect();
+  if (!r.width && !r.height) return closeCard();  // its verse is hidden (focused mode)
+  const minTop = document.getElementById("topbar").getBoundingClientRect().bottom + CARD_GAP;
+  const maxBottom = document.getElementById("player").getBoundingClientRect().top - CARD_GAP;
+  const above = r.top - CARD_GAP - minTop, below = maxBottom - r.bottom - CARD_GAP;
+  const fitsAbove = above >= card.offsetHeight || above >= below;
+  card.style.maxHeight = `${Math.max(fitsAbove ? above : below, 120)}px`;
+  card.style.top = `${fitsAbove ? r.top - CARD_GAP - card.offsetHeight : r.bottom + CARD_GAP}px`;
+  const w = card.offsetWidth;
+  card.style.left = `${Math.min(Math.max(CARD_GAP, r.left + r.width / 2 - w / 2), innerWidth - w - CARD_GAP)}px`;
+}
+window.addEventListener("resize", placeCard);
+cardFloats?.addEventListener?.("change", placeCard);
 
 function closeCard() {
   selected?.classList.remove("selected");
@@ -567,7 +650,7 @@ document.getElementById("card-close").addEventListener("click", closeCard);
 // clicks in the player bar leave it open). On the text, that click only closes the card:
 // it doesn't also jump the audio.
 document.addEventListener("click", (e) => {
-  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player, #focus-controls, #scholia")) return;
+  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player, #focus-controls, #scholia, .sch-btn")) return;
   closeCard();
   if (list.contains(e.target)) {
     e.stopPropagation();
@@ -694,7 +777,7 @@ showVolume();
 
 // Buttons don't keep keyboard focus after a click, so Space stays play/pause (rather
 // than pressing the last-clicked button again on top of it).
-for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle, #scholia-close")) {
+for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle, #scholia-close, .sch-btn")) {
   b.addEventListener("mousedown", (e) => e.preventDefault());
 }
 
@@ -724,8 +807,9 @@ document.addEventListener("keydown", (e) => {
     focused.checked = !focused.checked;
     applyFocused();
   } else if (e.key === "s" || e.key === "S") {
-    showScholia.checked = !showScholia.checked;
-    applyScholia();
+    if (document.body.classList.contains("scholia-popup")) closeScholia();
+    else if (popupMode()) { if (focusIdx >= 0 && verses[focusIdx].scholia) openScholiaPopup(verses[focusIdx].line); }
+    else { showScholia.checked = !showScholia.checked; applyScholia(); }
   }
 });
 

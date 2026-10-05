@@ -8,7 +8,8 @@ Routes:
   /api/book/<n>        JSON: title, audio URL and verses (text, paraphrase, timings,
                        and per-word paraphrase equivalents where aligned; Homeric words
                        sharing a paraphrase word, e.g. a verb in tmesis, share a group id;
-                       Murray's English per line where split, else as ~5-line passages)
+                       Murray's English per line where split, else as ~5-line passages;
+                       the number of scholia per line)
   /api/word/<b>/<l>/<i>  JSON: treebank parse of word i (whitespace chunk) of verse b.l
   /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript
   /audio/<file>        a file from recordings/, with HTTP Range support for seeking
@@ -58,6 +59,11 @@ def book_json(book):
         "SELECT line, text FROM translation_lines WHERE translation = 'murray' AND book = ?", (book,)))
     modern = dict(con.execute(
         "SELECT line, text FROM translation_lines WHERE translation = 'polylas' AND book = ?", (book,)))
+    # How many scholia each line has (one covering several lines counts for each).
+    scholia = {}
+    for first, last in con.execute("SELECT line, line_to FROM scholia WHERE book = ?", (book,)):
+        for line in range(first, last + 1):
+            scholia[line] = scholia.get(line, 0) + 1
     # Passages only where the lines aren't split yet.
     translation = [{"from": a, "to": b, "text": t} for a, b, t in con.execute(
         "SELECT line_from, line_to, text FROM translation_passages "
@@ -69,6 +75,7 @@ def book_json(book):
         return None
     verses = [{"line": line, "text": text, "paraphrase": paraphrase, "english": english.get(line),
                "modern": modern.get(line),
+               **({"scholia": scholia[line]} if line in scholia else {}),
                **(dict(zip(("start", "speechEnd", "end"), timing[line])) if line in timing else {}),
                **({"glosses": {i: " ".join(w) for i, w in glosses[line].items()}} if line in glosses else {}),
                **({"groups": groups[line]} if line in groups else {})}
