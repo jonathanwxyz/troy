@@ -6,3 +6,7 @@ data/raw/
 data/*.sqlite
 
 __pycache__/
+
+# Audio recordings (large, from YouTube), kept local
+recordings/
+.venv/

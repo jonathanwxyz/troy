@@ -8,11 +8,16 @@ plain-text copy of the `verses` table.
 
 Run in this order; each script replaces only its own tables. Pages are cached in `raw/`.
 
-1. `scripts/parse_iliad.py` → `verses` (+ `iliad.tsv`), from vasilestancu.ro
+1. `scripts/parse_iliad.py` → `verses` (+ `iliad.tsv`), from vasilestancu.ro, and `books`
+   from `book_titles.tsv`
 2. `scripts/import_treebank.py` → `sentences`, `tokens`, from Perseus AGDT 2.1
 3. `scripts/align_words.py` → `word_links`
 4. `scripts/import_paraphrase_alignment.py` → `paraphrase_links`, from the hand-made
    files in `paraphrase_alignment/` (`-v` lists Gaza's unaligned additions)
+
+5. `.venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus`
+   → `verse_timings` (setup in `requirements-audio.txt`; recordings stay local, see
+   `.gitignore`)
 
 `scripts/compare_alignments.py REF CANDIDATE [-v]` scores one alignment file against
 another (link precision/recall, per-word agreement).
@@ -21,6 +26,8 @@ another (link precision/recall, per-word agreement).
 
 - **verses** `(book, line)`: `homer` (site text), `paraphrase` (Gaza; NULL where he has
   none), `site_line` (the number the site shows).
+- **books** `book`: `title`, the spoken intro read before line 1 of that book's
+  recording (Book 1: Ὁμήρου Ἰλιάς. Ῥαψῳδία Α.). Edit `book_titles.tsv` to add more.
 - **tokens** `seq`: one row per treebank word in reading order, with `book, line`,
   `form, lemma, postag` and the tag decoded (`pos, person, number, tense, mood, voice,
   gender, gram_case, degree`), plus `head, relation` (parse) and `artificial`.
@@ -47,6 +54,15 @@ another (link precision/recall, per-word agreement).
   unaligned; split verbs (ἐπὶ … ἔτελλεν) link both parts to the one Attic verb; when
   Gaza moves words across a line break, `para_line` differs from `line`. The source
   format is described at the top of `paraphrase_alignment/book01.txt`.
+
+- **verse_timings** `(recording, model, book, line)`: where each verse is in a
+  recording, in seconds. `line` 0 is the spoken title (`books.title`). `start` = first
+  sound, `speech_end` = last sound, `end` = next verse's start (so `end - speech_end` is
+  the pause after the verse; up to ~20 s at paragraph breaks). Made by CTC forced
+  alignment with Meta's MMS model on romanized text; the Greek wav2vec2 model lost its
+  place on Book 1. Check for Book 1: 95.9% of verse starts fall on a pause (median
+  0.03 s from its end); the rest are run-on lines read without a pause. Known slip:
+  1.312 starts ~1.4 s early (just before the pause that precedes it).
 
 ## Known mismatches (expect these)
 

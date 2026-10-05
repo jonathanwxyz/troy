@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Parse vasilestancu.ro's interlinear Iliad pages (Homeric text + Gaza's paraphrase)
-into data/iliad.sqlite and data/iliad.tsv.
+into data/iliad.sqlite and data/iliad.tsv, and load the spoken book titles from
+data/book_titles.tsv into the `books` table.
 
 Raw pages are cached in data/raw/ and only downloaded if missing.
 """
@@ -16,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
 DB = ROOT / "data" / "iliad.sqlite"
 TSV = ROOT / "data" / "iliad.tsv"
+TITLES = ROOT / "data" / "book_titles.tsv"
 
 ROW_MARKER = "<!--textul_homeric_normal!-->"
 DELIM = "<!--»!-->"
@@ -88,6 +90,19 @@ def main():
         """
     )
     con.executemany("INSERT INTO verses VALUES (?, ?, ?, ?, ?)", rows)
+
+    # Spoken intro of each book's recording (e.g. "Ὁμήρου Ἰλιάς. Ῥαψῳδία Α."), read before line 1.
+    titles = [line.split("\t") for line in TITLES.read_text(encoding="utf-8").splitlines()[1:] if line]
+    con.executescript(
+        """
+        DROP TABLE IF EXISTS books;
+        CREATE TABLE books (
+            book  INTEGER PRIMARY KEY,  -- 1..24
+            title TEXT                  -- spoken title at the start of the recording
+        );
+        """
+    )
+    con.executemany("INSERT INTO books VALUES (?, ?)", [(int(b), unicodedata.normalize("NFC", t)) for b, t in titles])
     con.commit()
     con.close()
 
