@@ -2,7 +2,8 @@
 
 `iliad.sqlite` holds the Iliad with Theodorus Gaza's paraphrase, line by line, and the
 Perseus treebank (lemma, morphology, dependency parse) word by word. `iliad.tsv` is a
-plain-text copy of the `verses` table.
+plain-text copy of the `verses` table. Both are rebuilt by the scripts below and stay out
+of git; `iliad.tsv` because its source states no licence.
 
 ## Rebuilding
 
