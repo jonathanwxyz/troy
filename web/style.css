@@ -8,6 +8,7 @@
   --pause-bg: #f7efdb;
   --player-bg: rgba(251, 248, 242, 0.94);
   --greek: "Gentium Book Plus", "GFS Didot", "Noto Serif", "Times New Roman", serif;
+  color-scheme: light;  /* native controls (the book list, scrollbars) follow the theme */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -19,9 +20,11 @@
     --current-bar: #d9a441;
     --pause-bg: #2c271e;
     --player-bg: rgba(29, 26, 22, 0.94);
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #1d1a16;
   --text: #e9e2d6;
   --muted: #8f8577;
@@ -77,6 +80,7 @@ main {
   cursor: pointer;
 }
 #book-select:hover, #book-select:focus { border-color: var(--rule); outline: none; }
+#book-select option { background: var(--bg); color: var(--text); }
 #to-start {
   margin-left: auto;
   display: inline-flex;
@@ -286,7 +290,14 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   font-size: 22px; line-height: 1; cursor: pointer; padding: 0 0.3rem;
 }
 #scholia-close:hover { color: var(--text); }
-#scholia-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.3rem 1rem 0.6rem; }
+#scholia-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.3rem 1.35rem 0.6rem 1rem; }
+/* Scrolling panels: a thin scrollbar in the theme's colours, with its own gutter (classic
+   scrollbars) and room in the padding for overlay ones, so it never covers the counts. */
+#scholia-body, #card {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 55%, transparent) transparent;
+  scrollbar-gutter: stable;
+}
 #scholia .note { color: var(--muted); font-style: italic; }
 .sch-src { margin-top: 0.4rem; }
 .sch-src summary {
@@ -369,6 +380,8 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     cursor: pointer;
   }
   .verse.current .sch-btn, .sch-btn:hover { opacity: 1; color: var(--current-bar); }
+  /* The page behind the popup doesn't scroll, so only the popup has a scrollbar. */
+  html:has(body.scholia-popup) { overflow: hidden; }
   body.scholia-popup::after {
     content: "";
     position: fixed;
