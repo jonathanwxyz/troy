@@ -55,6 +55,7 @@ main {
 #topbar {
   position: sticky;
   top: 0;
+  padding-top: env(safe-area-inset-top);  /* below the notch in the installed app */
   z-index: 4;
   background: var(--player-bg);
   backdrop-filter: blur(6px);

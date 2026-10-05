@@ -36,6 +36,14 @@ Needs Python 3 (standard library only) and, for the audio, ffmpeg.
    python3 scripts/serve.py      # then http://localhost:8000/?book=1
    ```
 
+### As an app on a phone
+
+The reader is an installable web app: "Install" or "Add to Home Screen" in the browser
+gives it its own icon and window, and books already opened stay readable offline (the
+audio still needs the server). Run the server with `--host 0.0.0.0` so the phone can
+reach it. Phones only install, and only work offline, over HTTPS (plain `localhost` is
+the exception), so put it behind an HTTPS proxy, e.g. `tailscale serve 8000` or Caddy.
+
 ## Licence
 
 The code is under the [MIT licence](LICENSE). The texts and data the scripts download

@@ -799,11 +799,16 @@ document.getElementById("to-start").addEventListener("click", () => {
 const themeButton = document.getElementById("theme");
 const THEMES = ["auto", "light", "dark"];
 const THEME_NAMES = { auto: "automatic (as the system)", light: "light", dark: "dark" };
+const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)");
 function showTheme() {
   const mode = document.documentElement.dataset.theme ?? "auto";
   themeButton.dataset.mode = mode;
   themeButton.title = `Theme: ${THEME_NAMES[mode]}. Click to change.`;
+  // The phone's status bar (installed app) takes the page's background colour.
+  const dark = mode === "dark" || (mode === "auto" && !!systemDark?.matches);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#1d1a16" : "#fdf6e3");
 }
+systemDark?.addEventListener?.("change", showTheme);
 themeButton.addEventListener("click", () => {
   const mode = THEMES[(THEMES.indexOf(themeButton.dataset.mode) + 1) % THEMES.length];
   if (mode === "auto") delete document.documentElement.dataset.theme;
@@ -870,9 +875,34 @@ for (const ev of ["pause", "seeked"]) audio.addEventListener(ev, savePlace);
 window.addEventListener("pagehide", savePlace);
 document.addEventListener("visibilitychange", () => { if (document.hidden) savePlace(); });
 
+// Lock screen, notification and headset controls: play/pause, and the track buttons step
+// a verse.
+function setupMediaSession() {
+  if (!("mediaSession" in navigator)) return;
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: `Ῥαψῳδία ${GREEK_NUMERALS[BOOK]}`, artist: "Ὅμηρος", album: "Ἰλιάς",
+    artwork: [{ src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }],
+  });
+  const actions = {
+    play: () => { if (!isPlaying()) togglePlay(); },
+    pause: () => { if (isPlaying()) togglePlay(); },
+    previoustrack: stepBack,
+    nexttrack: stepForward,
+    seekto: (d) => { clearHold(); audio.currentTime = d.seekTime; update(); },
+  };
+  for (const [action, handler] of Object.entries(actions)) {
+    try { navigator.mediaSession.setActionHandler(action, handler); } catch {}  // not all are supported
+  }
+}
+
+// Installable app: the service worker caches the reader for offline use (sw.js).
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
 fetch(`/api/book/${BOOK}`)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-  .then((data) => { render(data); update(); restorePlace(); })
+  .then((data) => { render(data); update(); restorePlace(); setupMediaSession(); })
   .catch((err) => {
-    list.textContent = `Could not load book ${BOOK}: ${err.message}`;
+    list.textContent = navigator.onLine === false || err instanceof TypeError
+      ? `Book ${BOOK} isn't available offline yet: open it once while online, and it will be.`
+      : `Could not load book ${BOOK}: ${err.message}`;
   });

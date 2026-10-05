@@ -2,6 +2,7 @@
 """Local server for the reader front end (web/).
 
     python3 scripts/serve.py [--port 8000]   then open http://localhost:8000/
+    python3 scripts/serve.py --host 0.0.0.0  also reachable from other devices on the network
 
 Routes:
   /                    web/index.html (and other files under web/)
@@ -32,6 +33,7 @@ MODEL = "mms"
 
 mimetypes.add_type("audio/ogg", ".opus")
 mimetypes.add_type("audio/webm", ".webm")
+mimetypes.add_type("application/manifest+json", ".webmanifest")
 
 # Punctuation and editorial brackets around a paraphrase word, dropped in glosses.
 EDGE_PUNCT = re.compile(r"^[^\w’']+|[^\w’']+$")
@@ -269,8 +271,10 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="address to listen on (0.0.0.0: reachable from other devices, e.g. a phone)")
     args = ap.parse_args()
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Reader on http://localhost:{args.port}/  (Ctrl-C to stop)")
     try:
         server.serve_forever()
