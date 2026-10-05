@@ -1,12 +1,12 @@
 :root {
-  --bg: #fbf8f2;
+  --bg: #fdf6e3;
   --text: #2b2620;
   --muted: #8b8174;
   --rule: #e6dfd2;
   --current-bg: #f3e6c4;
   --current-bar: #b07a1e;
   --pause-bg: #f7efdb;
-  --player-bg: rgba(251, 248, 242, 0.94);
+  --player-bg: rgba(253, 246, 227, 0.94);
   --greek: "Gentium Book Plus", "GFS Didot", "Noto Serif", "Times New Roman", serif;
   color-scheme: light;  /* native controls (the book list, scrollbars) follow the theme */
 }
@@ -95,6 +95,22 @@ main {
   cursor: pointer;
 }
 #to-start:hover { color: var(--text); border-color: var(--current-bar); }
+/* Theme switch: automatic (follows the system) -> light -> dark. */
+#theme {
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  cursor: pointer;
+}
+#theme:hover { color: var(--text); border-color: var(--current-bar); }
+#theme svg { display: none; }
+#theme[data-mode="auto"] .th-auto, #theme[data-mode="light"] .th-light, #theme[data-mode="dark"] .th-dark { display: block; }
 .credits { text-align: center; margin-bottom: 1rem; }
 
 #verses { list-style: none; margin: 0; padding: 0; }

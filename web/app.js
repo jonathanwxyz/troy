@@ -784,7 +784,7 @@ showVolume();
 
 // Buttons don't keep keyboard focus after a click, so Space stays play/pause (rather
 // than pressing the last-clicked button again on top of it).
-for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, .toggle, #scholia-close, .sch-btn")) {
+for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, #theme, .toggle, #scholia-close, .sch-btn")) {
   b.addEventListener("mousedown", (e) => e.preventDefault());
 }
 
@@ -793,6 +793,25 @@ document.getElementById("to-start").addEventListener("click", () => {
   seekTo(0);
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
+
+// Theme switch: automatic (the system's choice) -> light -> dark, remembered per browser.
+// index.html applies the stored theme before the page draws.
+const themeButton = document.getElementById("theme");
+const THEMES = ["auto", "light", "dark"];
+const THEME_NAMES = { auto: "automatic (as the system)", light: "light", dark: "dark" };
+function showTheme() {
+  const mode = document.documentElement.dataset.theme ?? "auto";
+  themeButton.dataset.mode = mode;
+  themeButton.title = `Theme: ${THEME_NAMES[mode]}. Click to change.`;
+}
+themeButton.addEventListener("click", () => {
+  const mode = THEMES[(THEMES.indexOf(themeButton.dataset.mode) + 1) % THEMES.length];
+  if (mode === "auto") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = mode;
+  try { localStorage.setItem("theme", mode); } catch {}
+  showTheme();
+});
+showTheme();
 
 // Book picker.
 for (let b = 1; b <= 24; b++) bookSelect.add(new Option(`Ῥαψῳδία ${GREEK_NUMERALS[b]}`, String(b)));
