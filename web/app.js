@@ -17,6 +17,7 @@ const showTranslation = document.getElementById("show-translation");
 const showModern = document.getElementById("show-modern");
 const gloss = document.getElementById("gloss");
 const holdOnHover = document.getElementById("hold-on-hover");
+const focused = document.getElementById("focused");
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
 
@@ -119,26 +120,97 @@ function render(data) {
   }
 }
 
-// Index of the verse whose span [start, end) contains t (binary search).
+// Index of the verse whose span [start, end) contains t (binary search). A position a
+// hair before a verse's start counts as that verse: browsers snap a seek to the nearest
+// audio frame, which can land just short of the time asked for.
+const SEEK_SLACK = 0.05;  // seconds
 function verseAt(t) {
   let lo = 0, hi = verses.length - 1, found = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
-    if (verses[mid].start <= t) { found = mid; lo = mid + 1; } else hi = mid - 1;
+    if (verses[mid].start <= t + SEEK_SLACK) { found = mid; lo = mid + 1; } else hi = mid - 1;
   }
   return found;
+}
+
+// Focused mode shows verses[focusIdx] with its neighbours (the first verse before playback).
+// Stepping one verse animates the change: lines that stay visible glide (and grow or
+// shrink) from their old place to their new one, the incoming line fades in from the
+// direction of travel and the outgoing one fades out the other way.
+const FOCUS_MS = 450;
+const FOCUS_EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
+let focusIdx = -1;
+
+function setFocus(i) {
+  if (i === focusIdx) return;
+  const dir = i - focusIdx;
+  const animate = document.body.classList.contains("focused") && focusIdx >= 0 && Math.abs(dir) === 1
+    && typeof Element.prototype.animate === "function"
+    && !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const before = new Map();  // el -> {rect, font, opacity} for the lines visible before the change
+  if (animate) {
+    for (const k of [focusIdx - 1, focusIdx, focusIdx + 1]) {
+      const el = verses[k]?.el;
+      if (el) {
+        const cs = getComputedStyle(el);
+        before.set(el, { rect: el.getBoundingClientRect(), font: parseFloat(cs.fontSize), opacity: cs.opacity });
+      }
+    }
+  }
+
+  for (const k of [focusIdx - 1, focusIdx, focusIdx + 1]) verses[k]?.el.classList.remove("f-prev", "f-cur", "f-next");
+  focusIdx = i;
+  verses[i - 1]?.el.classList.add("f-prev");
+  verses[i]?.el.classList.add("f-cur");
+  verses[i + 1]?.el.classList.add("f-next");
+  if (!animate) return;
+
+  const now = [i - 1, i, i + 1].map((k) => verses[k]?.el).filter(Boolean);
+  for (const el of now) {
+    const b = before.get(el);
+    if (b) {  // stays visible: invert the move and size change, then play it forward
+      const r = el.getBoundingClientRect();
+      const s = b.font / parseFloat(getComputedStyle(el).fontSize);
+      el.animate([
+        { transformOrigin: "top left", transform: `translate(${b.rect.left - r.left}px, ${b.rect.top - r.top}px) scale(${s})` },
+        { transformOrigin: "top left", transform: "none" },
+      ], { duration: FOCUS_MS, easing: FOCUS_EASE });
+    } else {  // incoming
+      el.animate([
+        { opacity: 0, transform: `translateY(${dir * 28}px)` },
+        { opacity: getComputedStyle(el).opacity, transform: "none" },
+      ], { duration: FOCUS_MS, easing: FOCUS_EASE });
+    }
+  }
+  for (const [el, b] of before) {
+    if (now.includes(el)) continue;
+    // Outgoing: it is hidden now, so animate a copy left where it was.
+    const ghost = el.cloneNode(true);
+    ghost.classList.remove("current", "pausing", "held");
+    Object.assign(ghost.style, {
+      position: "fixed", left: `${b.rect.left}px`, top: `${b.rect.top}px`, width: `${b.rect.width}px`,
+      margin: "0", fontSize: `${b.font}px`, pointerEvents: "none", zIndex: "1",
+    });
+    ghost.setAttribute("aria-hidden", "true");
+    document.body.append(ghost);
+    ghost.animate([
+      { opacity: b.opacity, transform: "none" },
+      { opacity: 0, transform: `translateY(${-dir * 28}px)` },
+    ], { duration: FOCUS_MS, easing: FOCUS_EASE }).onfinish = () => ghost.remove();
+  }
 }
 
 function update() {
   const t = audio.currentTime;
   const i = verseAt(t);
+  if (verses.length) setFocus(Math.max(i, 0));
   if (i !== current) {
     if (current >= 0) verses[current].el.classList.remove("current", "pausing");
     current = i;
     if (i >= 0) {
       const el = verses[i].el;
       el.classList.add("current");
-      if (follow.checked && Date.now() - lastUserScroll > 4000) {
+      if (follow.checked && !focused.checked && Date.now() - lastUserScroll > 4000) {
         el.scrollIntoView({ block: "center", behavior: "smooth" });
       }
     }
@@ -192,7 +264,11 @@ function showPosition(text) {
 function jumpToTyped() {
   const m = position.value.trim().match(/^(?:(\d+)\.)?(\d+)$/);
   const book = m && m[1] ? Number(m[1]) : BOOK;
-  const i = m && book === BOOK ? verses.findIndex((v) => v.line === Number(m[2])) : -1;
+  const line = m ? Number(m[2]) : NaN;
+  let i = m && book === BOOK ? verses.findIndex((v) => v.line === line) : -1;
+  // Past the end of the book: go to its last verse.
+  const last = verses.reduce((a, v, k) => (v.line > verses[a].line ? k : a), 0);
+  if (i < 0 && m && book === BOOK && verses.length && line > verses[last].line) i = last;
   if (i < 0) {
     position.classList.add("invalid");
     position.select();
@@ -256,7 +332,9 @@ applyParaphrase();
 // Words sharing a paraphrase word (e.g. κατὰ … ἔκηα → κατέκαυσα) light up together.
 function linkGroup(w, on) {
   if (w.dataset.group == null) return;
-  for (const el of list.querySelectorAll(`.w[data-group="${w.dataset.group}"]`)) {
+  // In focused mode only the current line lights up, not a linked word in a neighbour.
+  const scope = on && focused.checked ? list.querySelector(".f-cur") ?? list : list;
+  for (const el of scope.querySelectorAll(`.w[data-group="${w.dataset.group}"]`)) {
     el.classList.toggle("linked", on);
   }
 }
@@ -345,7 +423,6 @@ async function openCard(w) {
   selected = w;
   w.classList.add("selected");
   card.hidden = false;
-  document.body.classList.add("card-open");
   try {
     const r = await fetch(`/api/word/${BOOK}/${w.dataset.line}/${w.dataset.index}`);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -360,7 +437,6 @@ function closeCard() {
   selected?.classList.remove("selected");
   selected = null;
   card.hidden = true;
-  document.body.classList.remove("card-open");
 }
 
 // Capture phase, so a word click doesn't also reach the verse's seek handler.
@@ -371,6 +447,18 @@ list.addEventListener("click", (e) => {
   w === selected ? closeCard() : openCard(w);
 }, true);
 document.getElementById("card-close").addEventListener("click", closeCard);
+
+// Clicking off the card closes it (a click on another word opens that word's card instead;
+// clicks in the player bar leave it open). On the text, that click only closes the card:
+// it doesn't also jump the audio.
+document.addEventListener("click", (e) => {
+  if (!selected || card.contains(e.target) || e.target.closest?.(".w, #player")) return;
+  closeCard();
+  if (list.contains(e.target)) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+}, true);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected) closeCard(); });
 
 // Track which verse's text the pointer is on; leaving a held verse resumes playback.
@@ -394,6 +482,17 @@ holdOnHover.addEventListener("change", () => {
   if (!holdOnHover.checked) { clearHold(); update(); }
 });
 
+// Focused mode toggle (F), remembered per browser.
+function applyFocused() {
+  document.body.classList.toggle("focused", focused.checked);
+  try { localStorage.setItem("focused", focused.checked ? "1" : "0"); } catch {}
+  if (focused.checked) window.scrollTo(0, 0);
+  else if (current >= 0) verses[current].el.scrollIntoView({ block: "center" });
+}
+try { focused.checked = localStorage.getItem("focused") === "1"; } catch {}
+focused.addEventListener("change", applyFocused);
+applyFocused();
+
 // Don't fight the reader: pause auto-follow for a few seconds after a manual scroll.
 for (const ev of ["wheel", "touchmove"]) {
   window.addEventListener(ev, () => { lastUserScroll = Date.now(); }, { passive: true });
@@ -407,10 +506,14 @@ document.getElementById("prev").addEventListener("click", () => {
 document.getElementById("next").addEventListener("click", () => seekTo(verseAt(audio.currentTime) + 1));
 
 document.addEventListener("keydown", (e) => {
-  if (e.target.closest("input, textarea, audio")) return;
+  if (e.target.closest?.("input, textarea, audio")) return;
   if (e.key === " ") { e.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
   else if (e.key === "ArrowLeft") { e.preventDefault(); document.getElementById("prev").click(); }
   else if (e.key === "ArrowRight") { e.preventDefault(); document.getElementById("next").click(); }
+  else if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    focused.checked = !focused.checked;
+    applyFocused();
+  }
 });
 
 fetch(`/api/book/${BOOK}`)

@@ -192,18 +192,19 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 #card .label { font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 0.06em;
                text-transform: uppercase; color: var(--muted); margin-right: 0.35rem; }
 
-/* Wide screens: card beside the text, the text shifted left to make room. */
-@media (min-width: 1100px) {
+/* Wide screens: card in the right-hand margin beside the text column (which stays put),
+   centred vertically in the space above the player. */
+@media (min-width: 76rem) {
   #card {
-    top: 2rem;
-    right: max(16px, calc((100vw - 66rem) / 2));
-    width: 20rem;
-    max-height: calc(100vh - 10rem);
+    top: calc(50vh - 3.75rem);
+    transform: translateY(-50%);
+    right: 1.25rem;
+    width: clamp(14rem, calc((100vw - 44rem) / 2 - 2.5rem), 22rem);
+    max-height: calc(100vh - 11rem);
   }
-  body.card-open main { margin-left: max(16px, calc((100vw - 66rem) / 2)); }
 }
-/* Narrow screens: card as a sheet above the player. */
-@media (max-width: 1099.98px) {
+/* Narrower screens: card as a sheet above the player. */
+@media (max-width: 75.99rem) {
   #card { left: 8px; right: 8px; bottom: 7.5rem; max-height: 45vh; }
 }
 
@@ -276,6 +277,25 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 #position.invalid { border-color: #c0392b; }
 .toggle { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
 .toggle.push { margin-left: auto; }
+
+/* Focused mode: only the current verse (large, centred) and its neighbours. */
+body.focused header { display: none; }
+body.focused main {
+  min-height: calc(100vh - 7.5rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 1.5rem;
+  padding-bottom: 8.5rem;
+}
+body.focused #verses > li:not(.f-cur):not(.f-prev):not(.f-next) { display: none; }
+body.focused #verses > li.trans { display: none; }
+body.focused .verse { transition: opacity 200ms ease; }
+/* The neighbours are context only: no hover, highlight or clicks. */
+body.focused .verse.f-prev,
+body.focused .verse.f-next { opacity: 0.4; pointer-events: none; }
+body.focused .verse.f-cur { font-size: 1.3em; margin: 1.4rem 0; padding-top: 0.5rem; padding-bottom: 0.6rem; }
+body.focused .verse.f-cur .num { visibility: visible; }
 
 @media (max-width: 520px) {
   body { font-size: 19px; }
