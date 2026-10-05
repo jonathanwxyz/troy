@@ -4,13 +4,24 @@ store per-verse start/end times in data/iliad.sqlite (`verse_timings`).
 
     .venv/bin/python scripts/align_audio.py --book 1 --audio recordings/iliad01.opus --model greek
 
-Models (both wav2vec2, 300M parameters, CPU is fine):
+Models (both wav2vec2, 300M parameters):
   mms    MahmoudAshraf/mms-300m-1130-forced-aligner   Meta MMS, romanized (uroman) text (default)
   greek  jonatasgrosman/wav2vec2-large-xlsr-53-greek  modern Greek, monotonic uppercase letters;
          on Book 1 it lost its place after ~line 100, MMS did not
 
 The spoken book title (`books.title`) is aligned as line 0, before line 1.
-Frame-level model output is cached next to the recording (recordings/cache/).
+Frame-level model output (the emissions) is cached next to the recording
+(recordings/cache/). That is nearly all the work, and it depends only on the audio,
+so it can be made on a faster machine and copied over:
+
+    .venv/bin/python scripts/align_audio.py --audio recordings/iliad01.m4a --emissions-only
+
+needs neither the database nor --book. Copy recordings/cache/<file>.<model>.npy back
+and run the full command here: it finds the cache and aligns in seconds.
+
+The model runs on a GPU when there is one (--device auto: CUDA, then Apple's MPS, else
+CPU); a GPU is many times faster than a laptop CPU. It needs a GPU build of PyTorch,
+see requirements-audio.txt.
 """
 import argparse
 import sqlite3
@@ -47,7 +58,17 @@ def load_audio(path):
     return np.frombuffer(raw, dtype=np.float32)
 
 
-def emissions(audio, model, processor):
+def pick_device(name):
+    if name != "auto":
+        return torch.device(name)
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return torch.device("mps")
+    return torch.device("cpu")
+
+
+def emissions(audio, model, processor, device):
     """Frame-level log-probabilities (frames x vocab) for the whole recording."""
     chunk, ctx = CHUNK_S * SR, CONTEXT_S * SR
     out = []
@@ -55,8 +76,8 @@ def emissions(audio, model, processor):
         for s0 in range(0, len(audio), chunk):
             s1 = min(s0 + chunk, len(audio))
             a0, a1 = max(0, s0 - ctx), min(len(audio), s1 + ctx)
-            x = processor(audio[a0:a1], sampling_rate=SR, return_tensors="pt").input_values
-            lp = torch.log_softmax(model(x).logits[0], dim=-1).numpy()
+            x = processor(audio[a0:a1], sampling_rate=SR, return_tensors="pt").input_values.to(device)
+            lp = torch.log_softmax(model(x).logits[0].float(), dim=-1).cpu().numpy()
             first = round((s0 - a0) / HOP)
             out.append(lp[first:first + round((s1 - s0) / HOP)])
     return np.concatenate(out)
@@ -159,12 +180,40 @@ def align(lp, segments, blank):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--book", type=int, required=True)
+    ap.add_argument("--book", type=int)
     ap.add_argument("--audio", type=Path, required=True)
     ap.add_argument("--model", choices=MODELS, default="mms")
+    ap.add_argument("--device", choices=["auto", "cpu", "cuda", "mps"], default="auto",
+                    help="where the model runs (default: a GPU if there is one)")
+    ap.add_argument("--emissions-only", action="store_true",
+                    help="only compute and cache the model output (no database or --book needed)")
     ap.add_argument("--lines", type=int, help="only the first N verses (with --seconds, for tests)")
     ap.add_argument("--seconds", type=float, help="only the first N seconds of audio")
     args = ap.parse_args()
+    if args.book is None and not args.emissions_only:
+        ap.error("--book is required (unless --emissions-only)")
+
+    name = MODELS[args.model]
+    processor = AutoProcessor.from_pretrained(name)
+    cache = args.audio.parent / "cache" / f"{args.audio.name}.{args.model}.npy"  # e.g. iliad01.m4a.mms.npy
+    t0 = time.time()
+    if cache.exists():
+        lp = np.load(cache)
+        if args.emissions_only:
+            print(f"emissions: already cached in {cache}")
+            return
+    else:
+        device = pick_device(args.device)
+        model = Wav2Vec2ForCTC.from_pretrained(name).eval().to(device)
+        lp = emissions(load_audio(args.audio), model, processor, device)
+        cache.parent.mkdir(exist_ok=True)
+        np.save(cache, lp)
+        print(f"emissions: {len(lp) * FRAME_S:.0f} s of audio in {time.time() - t0:.0f} s on {device}")
+        if args.emissions_only:
+            print(f"-> {cache}")
+            return
+    if args.seconds:
+        lp = lp[:int(args.seconds / FRAME_S)]
 
     con = sqlite3.connect(DB)
     title = con.execute("SELECT title FROM books WHERE book = ?", (args.book,)).fetchone()
@@ -173,27 +222,12 @@ def main():
         verses = verses[:args.lines]
     segments = ([(0, title[0])] if title and title[0] else []) + verses
 
-    name = MODELS[args.model]
-    processor = AutoProcessor.from_pretrained(name)
-    model = Wav2Vec2ForCTC.from_pretrained(name).eval()
     vocab = processor.tokenizer.get_vocab()
     blank = vocab.get("<blank>", vocab.get("<pad>"))
     uroman = None
     if args.model == "mms":
         import uroman as ur
         uroman = ur.Uroman()
-
-    cache = args.audio.parent / "cache" / f"{args.audio.name}.{args.model}.npy"  # e.g. iliad01.m4a.mms.npy
-    t0 = time.time()
-    if cache.exists():
-        lp = np.load(cache)
-    else:
-        lp = emissions(load_audio(args.audio), model, processor)
-        cache.parent.mkdir(exist_ok=True)
-        np.save(cache, lp)
-        print(f"emissions: {len(lp) * FRAME_S:.0f} s of audio in {time.time() - t0:.0f} s")
-    if args.seconds:
-        lp = lp[:int(args.seconds / FRAME_S)]
 
     tokens = [tokenize(text, args.model, vocab, uroman) for _, text in segments]
     t1 = time.time()

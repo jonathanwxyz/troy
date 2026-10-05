@@ -24,7 +24,10 @@ Run in this order; each script replaces only its own tables. Pages are cached in
 7. `.venv/bin/python scripts/align_audio.py --book N --audio recordings/iliadNN.m4a`
    → `verse_timings` (setup in `requirements-audio.txt`), or `scripts/align_all.sh` for
    all 24 books (~4–5 h on CPU). `scripts/check_timings.py` checks the result against
-   the pauses in each recording.
+   the pauses in each recording. The slow part (the model's output, cached in
+   `recordings/cache/`) depends only on the audio and uses a GPU when there is one: to
+   make it on another machine, run `align_audio.py --audio … --emissions-only` there (no
+   database needed) and copy the `.npy` files back.
 
 The recordings (Project Eustathios, modern pronunciation, Homer only) stay local, see
 `.gitignore`. Fetch them as AAC with
