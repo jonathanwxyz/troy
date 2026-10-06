@@ -13,3 +13,8 @@ __pycache__/
 # Audio recordings (large, from YouTube), kept local
 recordings/
 .venv/
+
+# The library's catalogue (which texts, in which categories) is local; the example
+# shows the format
+library/*
+!library/catalogue.example.json

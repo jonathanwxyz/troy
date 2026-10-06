@@ -5,6 +5,11 @@ Perseus treebank (lemma, morphology, dependency parse) word by word. `iliad.tsv`
 plain-text copy of the `verses` table. Both are rebuilt by the scripts below and stay out
 of git; `iliad.tsv` because its source states no licence.
 
+`library.sqlite` holds the library's other texts (tables `categories`, `texts`,
+`divisions`, `segments`), built by `scripts/library.py` from the local catalogue
+(`library/catalogue.json`); its downloads are cached in `raw/library/`. It stays out of
+git, like the catalogue.
+
 ## Rebuilding
 
 Run in this order; each script replaces only its own tables. Pages are cached in `raw/`.

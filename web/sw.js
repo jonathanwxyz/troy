@@ -5,11 +5,11 @@
 // and scholia already seen stay readable. Fonts never change, so they come from the
 // cache once fetched. Audio is left to the browser: it is fetched in byte ranges, which
 // a plain cache can't answer.
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const FONTS = "fonts";  // kept across versions
-const SHELL_FILES = ["./", "index.html", "app.js", "style.css", "manifest.webmanifest",
+const SHELL_FILES = ["./", "index.html", "home.js", "read.html", "app.js", "style.css", "manifest.webmanifest",
                      "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png", "icons/icon-32.png"];
 
 self.addEventListener("install", (e) => {
@@ -54,8 +54,10 @@ self.addEventListener("fetch", (e) => {
   } else if (url.origin !== location.origin || url.pathname.startsWith("/audio/")) {
     return;  // the browser handles it
   } else if (request.mode === "navigate" && (url.pathname === "/" || url.pathname === "/index.html")) {
-    // The reader is one page whatever the book (?book=N): cache it under one key.
     e.respondWith(networkFirst(request, SHELL, new URL("index.html", self.registration.scope).href));
+  } else if (request.mode === "navigate" && url.pathname === "/read.html") {
+    // The reader is one page whatever the text and book (?text=…&book=N): one cache key.
+    e.respondWith(networkFirst(request, SHELL, new URL("read.html", self.registration.scope).href));
   } else if (url.pathname.startsWith("/api/")) {
     e.respondWith(networkFirst(request, DATA));
   } else {

@@ -1,9 +1,9 @@
 {
-  "name": "Iliad Reader",
-  "short_name": "Ἰλιάς",
-  "description": "Homer's Iliad in Greek, following a recitation, with Gaza's paraphrase, translations and the scholia.",
+  "name": "Reader",
+  "short_name": "Reader",
+  "description": "Greek texts to read, following a recitation where there is one.",
   "lang": "grc",
-  "start_url": "./?book=1",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#fdf6e3",

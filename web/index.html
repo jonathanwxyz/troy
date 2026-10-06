@@ -7,115 +7,27 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<meta name="apple-mobile-web-app-title" content="Ἰλιάς">
+<meta name="apple-mobile-web-app-title" content="Reader">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Iliad Reader</title>
+<title>Library</title>
+<script>
+  // Old links to the reader (/?book=N) still work.
+  if (new URLSearchParams(location.search).has("book")) location.replace("read.html" + location.search);
+  try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script>
-  // The chosen theme, applied before the page draws (no flash of the other one).
-  try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
-</script>
 </head>
-<body>
-<header id="topbar">
-  <div class="topbar-inner">
-    <span class="eyebrow">Ὁμήρου Ἰλιάς</span>
-    <select id="book-select" aria-label="Book"></select>
-    <button id="to-start" title="Back to the beginning of the book">
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 4h14M12 20V9M7 13l5-5 5 5"/></svg>
-      beginning
-    </button>
-    <button id="theme" aria-label="Theme">
-      <svg class="th-auto" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 4a8 8 0 0 1 0 16z"/></svg>
-      <svg class="th-light" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
-      <svg class="th-dark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
-    </button>
-  </div>
-</header>
+<body class="library">
 <main>
-  <div class="credits">
-    <p class="credit" id="translation-credit">English: A. T. Murray (Loeb, 1924), via Perseus</p>
-    <p class="credit" id="modern-credit">Μετάφραση: Ἰάκωβος Πολυλάς (1923), via Βικιθήκη</p>
-  </div>
-  <ol id="verses" aria-live="off"></ol>
+  <h1>Βιβλιοθήκη</h1>
+  <p class="sub">Library</p>
+  <div id="library" aria-live="polite"></div>
 </main>
-
-<div id="focus-controls" aria-label="Verse controls">
-  <button id="fc-prev" title="Previous verse (↑)" aria-label="Previous verse">
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6 15l6-6 6 6"/></svg>
-  </button>
-  <button id="fc-play" title="Play / pause (Space)" aria-label="Play">
-    <svg class="icon-play" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l11-6.5z"/></svg>
-    <svg class="icon-pause" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
-  </button>
-  <button id="fc-next" title="Next verse (↓)" aria-label="Next verse">
-    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
-  </button>
-</div>
-
-<footer id="player">
-  <audio id="audio" preload="metadata"></audio>
-  <div class="transport">
-    <button id="prev" class="tbtn" title="Previous verse (← ↑)" aria-label="Previous verse">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M6 5h2.5v14H6zM19 5.5v13L9.5 12z"/></svg>
-    </button>
-    <button id="play" class="tbtn play" title="Play / pause (Space)" aria-label="Play">
-      <svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13l11-6.5z"/></svg>
-      <svg class="icon-pause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
-    </button>
-    <button id="next" class="tbtn" title="Next verse (→ ↓)" aria-label="Next verse">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M15.5 5H18v14h-2.5zM5 5.5v13l9.5-6.5z"/></svg>
-    </button>
-    <input id="position" type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
-           value="—" title="Type a line number and press Enter" aria-label="Line: type a number and press Enter to jump">
-    <div class="timeline">
-      <span id="time-now" class="time">0:00</span>
-      <input id="seek" type="range" min="0" max="0" step="0.1" value="0" aria-label="Seek">
-      <span id="time-total" class="time">0:00</span>
-    </div>
-    <span class="volume">
-      <button id="mute" class="tbtn bare" title="Mute / unmute" aria-label="Mute">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>
-          <path class="vol-waves" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/>
-          <path class="vol-x" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9l5 6M21 9l-5 6"/>
-        </svg>
-      </button>
-      <input id="volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volume">
-    </span>
-  </div>
-  <div class="controls">
-    <label class="toggle" title="Show only the current verse, with the one before and after (F)"><input type="checkbox" id="focused"> focused</label>
-    <label class="toggle" title="Pause at the end of the verse the pointer is on; resume when it moves off"><input type="checkbox" id="hold-on-hover"> pause on hover</label>
-    <label class="toggle"><input type="checkbox" id="show-paraphrase" checked> paraphrase</label>
-    <label class="toggle"><input type="checkbox" id="show-modern"> μετάφραση</label>
-    <label class="toggle"><input type="checkbox" id="show-translation"> translation</label>
-    <label class="toggle" title="Ancient scholia on the current verse (S)"><input type="checkbox" id="show-scholia"> σχόλια</label>
-    <label class="toggle"><input type="checkbox" id="follow" checked> follow</label>
-  </div>
-</footer>
-
-<div id="gloss" role="tooltip" hidden></div>
-
-<aside id="scholia" hidden aria-label="Scholia">
-  <header class="sch-head">
-    <span class="sch-title">σχόλια</span>
-    <span id="scholia-line"></span>
-    <button id="scholia-close" aria-label="Hide scholia" title="Hide scholia (S)">×</button>
-  </header>
-  <div id="scholia-body"></div>
-  <p class="sch-credit">Scholia: Dindorf &amp; Maass, <i>Scholia Graeca in Homeri Iliadem</i> (1875–88), via First1KGreek, CC BY-SA 4.0 · Leaf, Seymour, Benner: via Perseus, CC BY-SA 3.0</p>
-</aside>
-
-<aside id="card" hidden aria-live="polite">
-  <button id="card-close" aria-label="Close">×</button>
-  <div id="card-body"></div>
-</aside>
-<script src="app.js"></script>
+<script src="home.js"></script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+{
+  "categories": ["Epic", "Philosophy"],
+  "texts": [
+    {"slug": "iliad", "title": "Ἰλιάς", "author": "Ὅμηρος", "category": "Epic", "reader": "iliad"},
+    {"slug": "apology", "title": "Ἀπολογία Σωκράτους", "author": "Πλάτων", "category": "Philosophy",
+     "credit": "Text: Burnet (1900), via Perseus, CC BY-SA 4.0",
+     "source": {"type": "perseus", "work": "tlg0059.tlg002"}}
+  ]
+}

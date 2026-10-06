@@ -1,5 +1,14 @@
-// Iliad reader: shows a book's Homeric text and highlights the verse being recited.
-const BOOK = Number(new URLSearchParams(location.search).get("book") || 1);
+// Reader: shows one book of a text and, where there is a recording, highlights the verse
+// being recited. read.html?text=<slug>&book=<n>; the Iliad (the default text) comes from
+// its own API, with Gaza's paraphrase, translations, scholia and parsing. Library texts
+// have only what their data offers (data.features); prose (Plato) is set as paragraphs
+// with its sections (Stephanus) marked.
+const PARAMS = new URLSearchParams(location.search);
+const TEXT = PARAMS.get("text") || "iliad";
+const BOOK = Number(PARAMS.get("book") || 1);
+const API = TEXT === "iliad" ? `/api/book/${BOOK}` : `/api/text/${encodeURIComponent(TEXT)}/${BOOK}`;
+let hasScholia = TEXT === "iliad";  // known for sure once the book has loaded
+const FEATURES = ["audio", "paraphrase", "modern", "translation", "scholia", "words"];
 // Speaker icon shown beside a verse on hover: clicking the row (not a word) goes to it.
 const SEEK_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">' +
   '<path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/>' +
@@ -10,8 +19,6 @@ const SEEK_ICON = '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="
 const SCHOLIA_ICON = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">' +
   '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 5h16v11H10l-4 3.5V16H4z"/>' +
   '<path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8 9h8M8 12.3h5"/></svg>';
-const GREEK_NUMERALS = ["", "Α", "Β", "Γ", "Δ", "Ε", "Ζ", "Η", "Θ", "Ι", "Κ", "Λ", "Μ",
-                        "Ν", "Ξ", "Ο", "Π", "Ρ", "Σ", "Τ", "Υ", "Φ", "Χ", "Ψ", "Ω"];
 
 const audio = document.getElementById("audio");
 const list = document.getElementById("verses");
@@ -28,7 +35,9 @@ const cardBody = document.getElementById("card-body");
 const focusControls = document.getElementById("focus-controls");
 const bookSelect = document.getElementById("book-select");
 
+let DATA = null;   // the book as loaded
 let verses = [];   // {line, text, start, speechEnd, end, el}, timed ones in recording order
+let refs = [];     // {ref, el, entry}: every line or section start, for the position box
 let current = -1;  // index into verses
 let lastUserScroll = 0;
 let passages = [];    // {from, to, el}: Murray's English passages
@@ -41,20 +50,43 @@ let heldBy = null;    // verse we paused at because it was hovered
 let released = null;  // verse the reader resumed by hand while hovering: don't hold it again
 
 function render(data) {
-  bookSelect.value = String(data.book);
-  document.title = `Iliad ${data.book} — Reader`;
+  DATA = data;
+  const has = new Set(data.features ?? []);
+  for (const f of FEATURES) document.body.classList.toggle(`no-${f}`, !has.has(f));
+  if (!has.has("audio")) document.body.classList.remove("focused");  // nothing to focus on
+  list.classList.toggle("prose", data.form === "prose");
+  document.getElementById("eyebrow").textContent = data.eyebrow ?? data.title;
+  const bookLabel = data.books.find((b) => b.n === data.book)?.label;
+  document.title = `${data.title}${bookLabel ? ` · ${bookLabel}` : ""} — Reader`;
+  fillBooks(data.books);
+  document.getElementById("credits").replaceChildren(...(data.credits ?? []).map((c) => {
+    const p = el("p", "credit", c.text);
+    if (c.id) p.id = c.id;
+    return p;
+  }));
+  hasScholia = has.has("scholia");
+  document.querySelector(".sch-credit").textContent = data.notesCredit ?? "";
   if (data.audio) audio.src = data.audio;
+  if (data.form === "prose") renderProse(data);
+  else renderVerse(data, has);
+  applyScholia();
+  const first = refs.find((r) => r.ref && r.ref !== "0")?.ref;
+  if (!data.audio) position.placeholder = data.cite === "section" ? `go to ${first}` : "go to line";
+  if (data.cite === "section") position.title = `Type a section (e.g. ${first}) and press Enter`;
+}
 
+function renderVerse(data, has) {
   const frag = document.createDocumentFragment();
   for (const v of data.verses) {
     const li = document.createElement("li");
     li.className = "verse" + (v.line === 0 ? " title" : "") + (v.start == null ? " untimed" : "");
+    const ref = v.ref ?? String(v.line);
     const num = document.createElement("span");
-    num.className = "num" + (v.line % 5 === 0 && v.line > 0 ? "" : " hidden");
-    num.textContent = v.line > 0 ? v.line : "";
+    num.className = "num" + (Number(ref) % 5 === 0 && Number(ref) > 0 ? "" : " hidden");
+    num.textContent = v.line > 0 ? ref : "";
     const text = document.createElement("span");
     text.className = "text";
-    if (v.line > 0) {
+    if (v.line > 0 && has.has("words")) {
       // One span per whitespace chunk; chunk indices match word_links/paraphrase_links.word_index.
       v.text.split(" ").forEach((chunk, i) => {
         if (i) text.append(" ");
@@ -77,15 +109,8 @@ function render(data) {
       li.append(icon);
     }
     li.append(num, text);
-    if (v.scholia) {
-      const b = document.createElement("button");
-      b.className = "sch-btn";
-      b.innerHTML = SCHOLIA_ICON;
-      b.title = `Scholia on line ${v.line} (${v.scholia})`;
-      b.setAttribute("aria-label", b.title);
-      b.addEventListener("click", (e) => { e.stopPropagation(); openScholiaPopup(v.line); });
-      li.append(b);
-    }
+    setNoteKey(li, v.line, v.line, v.line === 0 ? "" : data.books.length > 1 ? `${BOOK}.${ref}` : ref);
+    if (v.scholia) li.append(scholiaButton(li, `line ${ref}`, v.scholia));
     if (v.paraphrase) {
       const para = document.createElement("span");
       para.className = "para";
@@ -109,6 +134,7 @@ function render(data) {
     }
     const entry = { ...v, el: li };
     entryOf.set(li, entry);
+    if (v.line > 0) refs.push({ ref, el: li, entry: v.start != null ? entry : null });
     if (v.start != null) {
       li.addEventListener("click", () => seekTo(verses.indexOf(entry)));
       verses.push(entry);
@@ -134,6 +160,65 @@ function render(data) {
     after.after(li);
     passages.push({ ...p, el: li });
   }
+}
+
+// Prose: a paragraph per speech (or the editor's paragraph), speaker first. Where a
+// section begins, its number stands in the margin if the paragraph opens with it, and
+// in the text otherwise.
+function renderProse(data) {
+  const frag = document.createDocumentFragment();
+  let li = null, text = null, num = null, lastRef = null, notes = 0, refsIn = [];
+  const close = () => {  // the paragraph's notes key: its first to last segment
+    if (!li) return;
+    const label = refsIn.length > 1 ? `${refsIn[0]}–${refsIn.at(-1)}` : refsIn[0] ?? lastRef ?? "";
+    setNoteKey(li, Number(li.dataset.from), Number(li.dataset.to), label);
+    if (notes) li.append(scholiaButton(li, label, notes));
+  };
+  for (const v of data.verses) {
+    const opens = v.para || !text;
+    if (opens) {
+      close();
+      li = el("li", "verse prose-para untimed");
+      li.dataset.from = v.line;
+      num = el("span", "num");
+      text = el("span", "text");
+      li.append(num, text);
+      frag.append(li);
+      notes = 0;
+      refsIn = lastRef && !(v.ref && v.ref !== lastRef) ? [lastRef] : [];
+    }
+    li.dataset.to = v.line;
+    notes += v.scholia ?? 0;
+    if (v.ref && v.ref !== lastRef) refsIn.push(v.ref);
+    if (v.speaker) text.append(el("span", "speaker", v.speaker), " ");
+    const seg = el("span", "seg");
+    if (v.ref && v.ref !== lastRef) {
+      if (opens) num.textContent = v.ref;
+      else seg.append(el("span", "ref-mark", v.ref), " ");
+      refs.push({ ref: v.ref, el: opens ? text.parentNode : seg, entry: null });
+      lastRef = v.ref;
+    }
+    seg.append(v.text);
+    text.append(seg, " ");
+  }
+  close();
+  list.append(frag);
+}
+
+// Each row knows which segments its notes are on (for the scholia panel and popup).
+function setNoteKey(li, from, to, label) {
+  Object.assign(li.dataset, { from, to, label });
+}
+function noteKey(li) {
+  return li && { from: Number(li.dataset.from), to: Number(li.dataset.to), label: li.dataset.label, li };
+}
+function scholiaButton(li, what, count) {
+  const b = el("button", "sch-btn");
+  b.innerHTML = SCHOLIA_ICON;
+  b.title = `Notes on ${what} (${count})`;
+  b.setAttribute("aria-label", b.title);
+  b.addEventListener("click", (e) => { e.stopPropagation(); openScholiaPopup(noteKey(li)); });
+  return b;
 }
 
 // Index of the verse whose span [start, end) contains t (binary search). A position a
@@ -222,7 +307,7 @@ function update() {
   const i = verseAt(t);
   if (verses.length) {
     setFocus(Math.max(i, 0));
-    showScholiaFor(verses[focusIdx]);
+    showScholiaFor(noteKey(verses[focusIdx].el));
   }
   if (i !== current) {
     if (current >= 0) verses[current].el.classList.remove("current", "pausing");
@@ -250,9 +335,9 @@ function update() {
   if (i >= 0) {
     const v = verses[i];
     v.el.classList.toggle("pausing", t >= v.speechEnd);
-    showPosition((v.line === 0 ? "title" : `${BOOK}.${v.line}`) + (heldBy === v ? " · held" : ""));
+    showPosition((v.line === 0 ? "title" : `${BOOK}.${v.ref ?? v.line}`) + (heldBy === v ? " · held" : ""));
   } else {
-    showPosition("—");
+    showPosition(verses.length ? "—" : "");  // no recording: the box is just for jumping
   }
 }
 
@@ -311,22 +396,37 @@ function showPosition(text) {
   if (document.activeElement !== position) position.value = text;
 }
 
+// A line ("40", or "1.40" in book 1), or for prose a section ("172a"; "172" is its first).
+function findLine(typed) {
+  const m = typed.match(/^(?:(\d+)\.)?(\d+)$/);
+  if (!m || (m[1] && Number(m[1]) !== BOOK)) return null;
+  const line = Number(m[2]);
+  const lines = refs.filter((r) => Number(r.ref) > 0);
+  const last = lines.at(-1);
+  // Past the end of the book: its last line.
+  return lines.find((r) => Number(r.ref) === line) ?? (last && line > Number(last.ref) ? last : null);
+}
+function findSection(typed) {
+  const m = typed.toLowerCase().replace(/[\s.§]+/g, "").match(/^(\d+)([a-e]?)$/);
+  if (!m) return null;
+  return refs.find((r) => r.ref === m[1] + (m[2] || "a")) ?? refs.find((r) => r.ref.startsWith(m[1])) ?? null;
+}
+
 function jumpToTyped() {
-  const m = position.value.trim().match(/^(?:(\d+)\.)?(\d+)$/);
-  const book = m && m[1] ? Number(m[1]) : BOOK;
-  const line = m ? Number(m[2]) : NaN;
-  let i = m && book === BOOK ? verses.findIndex((v) => v.line === line) : -1;
-  // Past the end of the book: go to its last verse.
-  const last = verses.reduce((a, v, k) => (v.line > verses[a].line ? k : a), 0);
-  if (i < 0 && m && book === BOOK && verses.length && line > verses[last].line) i = last;
-  if (i < 0) {
+  const typed = position.value.trim();
+  const target = DATA?.cite === "section" ? findSection(typed) : findLine(typed);
+  if (!target) {
     position.classList.add("invalid");
     position.select();
     return;
   }
   position.blur();
-  seekTo(i, { play: false });
-  verses[i].el.scrollIntoView({ block: "center", behavior: "smooth" });
+  if (target.entry) seekTo(verses.indexOf(target.entry), { play: false });
+  target.el.scrollIntoView({ block: "center", behavior: "smooth" });
+  target.el.classList.remove("located");
+  void target.el.offsetWidth;  // restart the highlight if it is still running
+  target.el.classList.add("located");
+  setTimeout(() => target.el.classList.remove("located"), 1800);
 }
 
 position.addEventListener("focus", () => { position.select(); });
@@ -386,24 +486,27 @@ const showScholia = document.getElementById("show-scholia");
 const scholiaPanel = document.getElementById("scholia");
 const scholiaBody = document.getElementById("scholia-body");
 const scholiaLine = document.getElementById("scholia-line");
-const scholiaCache = new Map();  // line -> response promise
-let scholiaShown = null;         // line the panel shows
+const scholiaCache = new Map();  // "from-to" -> response promise
+let scholiaShown = null;         // "from-to" of the line(s) the panel shows
 let scholiaFolded = new Set();
 try { scholiaFolded = new Set(JSON.parse(localStorage.getItem("scholiaFolded")) ?? []); } catch {}
 
-function fetchScholia(line) {
-  if (!scholiaCache.has(line)) {
-    scholiaCache.set(line, fetch(`/api/scholia/${BOOK}/${line}`)
+function fetchScholia(key) {
+  const id = `${key.from}-${key.to}`;
+  if (!scholiaCache.has(id)) {
+    const url = TEXT === "iliad" ? `/api/scholia/${BOOK}/${key.from}`
+      : `/api/notes/${encodeURIComponent(TEXT)}/${BOOK}/${id}`;
+    scholiaCache.set(id, fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .catch((err) => { scholiaCache.delete(line); throw err; }));
+      .catch((err) => { scholiaCache.delete(id); throw err; }));
   }
-  return scholiaCache.get(line);
+  return scholiaCache.get(id);
 }
 
 function renderScholia(data) {
   scholiaBody.replaceChildren();
   scholiaBody.scrollTop = 0;
-  if (!data.sources.length) scholiaBody.append(el("p", "note", "No scholia on this line."));
+  if (!data.sources.length) scholiaBody.append(el("p", "note", TEXT === "iliad" ? "No scholia on this line." : "No notes here."));
   for (const src of data.sources) {
     const box = el("details", "sch-src");
     box.open = !scholiaFolded.has(src.id);
@@ -438,37 +541,62 @@ function renderScholia(data) {
 const scholiaPopupMode = window.matchMedia?.("(max-width: 89.99rem)");
 const popupMode = () => !!scholiaPopupMode?.matches;
 
-function loadScholia(line) {
-  scholiaShown = line;
-  scholiaLine.textContent = line ? `${BOOK}.${line}` : "";
-  if (!line) {  // the spoken title
+let notedRow = null;  // without a recording: the row the notes are on, marked in the text
+function loadScholia(key) {
+  const id = `${key.from}-${key.to}`;
+  scholiaShown = id;
+  notedRow?.classList.remove("noted");
+  notedRow = DATA && !DATA.audio ? key.li : null;
+  notedRow?.classList.add("noted");
+  scholiaLine.textContent = key.label;
+  if (TEXT === "iliad" && !key.from) {  // the spoken title
     scholiaBody.replaceChildren(el("p", "note", "The scholia begin at line 1."));
     return;
   }
-  fetchScholia(line)
-    .then((data) => { if (scholiaShown === line) renderScholia(data); })
+  fetchScholia(key)
+    .then((data) => { if (scholiaShown === id) renderScholia(data); })
     .catch((err) => {
-      if (scholiaShown === line) scholiaBody.replaceChildren(el("p", "note", `Could not load: ${err.message}`));
+      if (scholiaShown === id) scholiaBody.replaceChildren(el("p", "note", `Could not load: ${err.message}`));
     });
 }
 
-// The panel follows the current verse (toggle mode, wider screens).
-function showScholiaFor(v) {
-  if (!showScholia.checked || popupMode() || !v || v.line === scholiaShown) return;
-  loadScholia(v.line);
+// The panel follows the current verse (toggle mode, wider screens); without a recording,
+// the line or paragraph at the reading position, or the one last clicked.
+function showScholiaFor(key) {
+  if (!hasScholia || !showScholia.checked || popupMode() || !key || `${key.from}-${key.to}` === scholiaShown) return;
+  loadScholia(key);
 }
 
+function readingRow() {
+  const r = list.getBoundingClientRect();
+  const hit = document.elementFromPoint(r.left + r.width / 2, innerHeight * 0.4)?.closest?.("li.verse");
+  return hit && list.contains(hit) ? hit : null;
+}
+let clickedAt = 0;
+window.addEventListener("scroll", () => {
+  if (DATA && !DATA.audio && Date.now() - clickedAt > 1500) showScholiaFor(noteKey(readingRow()));
+}, { passive: true });
+list.addEventListener("click", (e) => {
+  if (!DATA || DATA.audio || e.target.closest(".sch-btn")) return;
+  const li = e.target.closest("li.verse");
+  if (!li) return;
+  clickedAt = Date.now();
+  showScholiaFor(noteKey(li));
+});
+
 // Popup (narrower screens): pauses the recording, as reading them takes a while.
-function openScholiaPopup(line) {
+function openScholiaPopup(key) {
   if (heldBy) { clearHold(); update(); }
   else if (!audio.paused) audio.pause();
   closeCard();
   document.body.classList.add("scholia-popup");
   scholiaPanel.hidden = false;
-  loadScholia(line);
+  loadScholia(key);
 }
 
 function closeScholia() {
+  notedRow?.classList.remove("noted");
+  notedRow = null;
   if (document.body.classList.contains("scholia-popup")) {
     document.body.classList.remove("scholia-popup");
     applyScholia();
@@ -479,14 +607,15 @@ function closeScholia() {
 }
 
 function applyScholia() {
-  const panel = showScholia.checked && !popupMode();
+  const panel = hasScholia && showScholia.checked && !popupMode();
   if (!popupMode()) document.body.classList.remove("scholia-popup");
   document.body.classList.toggle("show-scholia", panel);
   scholiaPanel.hidden = !panel && !document.body.classList.contains("scholia-popup");
   try { localStorage.setItem("showScholia", showScholia.checked ? "1" : "0"); } catch {}
   if (panel) {
     scholiaShown = null;
-    if (focusIdx >= 0) showScholiaFor(verses[focusIdx]);
+    if (focusIdx >= 0) showScholiaFor(noteKey(verses[focusIdx].el));
+    else if (DATA && !DATA.audio) showScholiaFor(noteKey(readingRow() ?? list.querySelector("li.verse")));
   }
 }
 try { showScholia.checked = localStorage.getItem("showScholia") === "1"; } catch {}
@@ -818,12 +947,17 @@ themeButton.addEventListener("click", () => {
 });
 showTheme();
 
-// Book picker.
-for (let b = 1; b <= 24; b++) bookSelect.add(new Option(`Ῥαψῳδία ${GREEK_NUMERALS[b]}`, String(b)));
-bookSelect.value = String(BOOK);
+// Book picker (hidden for a work in one piece).
+function fillBooks(books) {
+  bookSelect.replaceChildren(...books.map((b) => new Option(b.label, String(b.n))));
+  bookSelect.hidden = books.length < 2;
+  bookSelect.value = String(BOOK);
+}
 bookSelect.addEventListener("change", () => {
   savePlace();
-  location.search = `?book=${bookSelect.value}`;
+  const q = new URLSearchParams(TEXT === "iliad" ? {} : { text: TEXT });
+  q.set("book", bookSelect.value);
+  location.search = `?${q}`;
 });
 
 document.addEventListener("keydown", (e) => {
@@ -834,31 +968,42 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }
   else if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); stepForward(); }
   else if (e.ctrlKey || e.metaKey || e.altKey) return;
-  else if (e.key === "f" || e.key === "F") {
+  else if ((e.key === "f" || e.key === "F") && !document.body.classList.contains("no-audio")) {
     focused.checked = !focused.checked;
     applyFocused();
-  } else if (e.key === "s" || e.key === "S") {
+  } else if ((e.key === "s" || e.key === "S") && hasScholia) {
     if (document.body.classList.contains("scholia-popup")) closeScholia();
-    else if (popupMode()) { if (focusIdx >= 0 && verses[focusIdx].scholia) openScholiaPopup(verses[focusIdx].line); }
+    else if (popupMode()) { if (focusIdx >= 0 && verses[focusIdx].scholia) openScholiaPopup(noteKey(verses[focusIdx].el)); }
     else { showScholia.checked = !showScholia.checked; applyScholia(); }
   }
 });
 
 // Remember where you were: the audio position per book, saved while listening and on
-// leaving, restored (paused) on the next visit. Storage may be unavailable.
-const PLACE_KEY = `place:book${BOOK}`;
+// leaving, restored (paused) on the next visit; without a recording, the scroll position.
+// Storage may be unavailable.
+const PLACE_KEY = TEXT === "iliad" ? `place:book${BOOK}` : `place:${TEXT}:${BOOK}`;
 let restored = false;  // don't overwrite the saved place before it has been restored
 let lastSaved = 0;
 
 function savePlace() {
-  if (!restored || !Number.isFinite(audio.currentTime)) return;
-  try { localStorage.setItem(PLACE_KEY, audio.currentTime.toFixed(2)); } catch {}
+  if (!restored) return;
+  try {
+    if (!DATA?.audio) localStorage.setItem(PLACE_KEY, `scroll:${Math.round(scrollY)}`);
+    else if (Number.isFinite(audio.currentTime)) localStorage.setItem(PLACE_KEY, audio.currentTime.toFixed(2));
+  } catch {}
   lastSaved = Date.now();
 }
 
 function restorePlace() {
-  let t = NaN;
-  try { t = parseFloat(localStorage.getItem(PLACE_KEY)); } catch {}
+  let saved = null;
+  try { saved = localStorage.getItem(PLACE_KEY); } catch {}
+  if (!DATA.audio) {
+    const y = saved?.startsWith("scroll:") ? Number(saved.slice(7)) : 0;
+    if (y > 0) window.scrollTo(0, y);
+    restored = true;
+    return;
+  }
+  const t = parseFloat(saved);
   const apply = () => {
     if (t > 0 && (!audio.duration || t < audio.duration)) audio.currentTime = t;
     restored = true;
@@ -873,14 +1018,17 @@ function restorePlace() {
 audio.addEventListener("timeupdate", () => { if (Date.now() - lastSaved > 3000) savePlace(); });
 for (const ev of ["pause", "seeked"]) audio.addEventListener(ev, savePlace);
 window.addEventListener("pagehide", savePlace);
+window.addEventListener("scroll", () => { if (!DATA?.audio && Date.now() - lastSaved > 1000) savePlace(); },
+                        { passive: true });
 document.addEventListener("visibilitychange", () => { if (document.hidden) savePlace(); });
 
 // Lock screen, notification and headset controls: play/pause, and the track buttons step
 // a verse.
 function setupMediaSession() {
-  if (!("mediaSession" in navigator)) return;
+  if (!("mediaSession" in navigator) || !DATA.audio) return;
   navigator.mediaSession.metadata = new MediaMetadata({
-    title: `Ῥαψῳδία ${GREEK_NUMERALS[BOOK]}`, artist: "Ὅμηρος", album: "Ἰλιάς",
+    title: DATA.books.find((b) => b.n === BOOK)?.label ?? DATA.title, artist: DATA.author ?? "",
+    album: DATA.title,
     artwork: [{ src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }],
   });
   const actions = {
@@ -898,11 +1046,11 @@ function setupMediaSession() {
 // Installable app: the service worker caches the reader for offline use (sw.js).
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
-fetch(`/api/book/${BOOK}`)
+fetch(API)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
   .then((data) => { render(data); update(); restorePlace(); setupMediaSession(); })
   .catch((err) => {
     list.textContent = navigator.onLine === false || err instanceof TypeError
-      ? `Book ${BOOK} isn't available offline yet: open it once while online, and it will be.`
-      : `Could not load book ${BOOK}: ${err.message}`;
+      ? "This isn't available offline yet: open it once while online, and it will be."
+      : `Could not load this text: ${err.message}`;
   });

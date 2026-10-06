@@ -609,3 +609,82 @@ body.focused .verse.f-cur .seek-icon { display: none; }
   .verse { grid-template-columns: 2.2rem 1fr; column-gap: 0.5rem; }
   .verse:not(.untimed):hover .num { visibility: hidden; }  /* narrow column: the icon takes its place */
 }
+
+/* Back to the library. */
+#home {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 0.15rem;
+}
+#home:hover { color: var(--text); }
+
+/* Only the controls a text has data for: a library text without a recording keeps the
+   position box (for jumping to a line or section). */
+body.no-audio #prev, body.no-audio #play, body.no-audio #next, body.no-audio .timeline, body.no-audio .volume,
+body.no-audio .toggle:has(#focused), body.no-audio .toggle:has(#hold-on-hover), body.no-audio .toggle:has(#follow),
+body.no-paraphrase .toggle:has(#show-paraphrase), body.no-modern .toggle:has(#show-modern),
+body.no-translation .toggle:has(#show-translation), body.no-scholia .toggle:has(#show-scholia) { display: none; }
+body.no-audio.no-paraphrase.no-modern.no-translation.no-scholia .controls { display: none; }
+body.no-audio .transport { justify-content: center; }
+body.no-audio #position { width: 8rem; border-color: var(--rule); }
+body.no-audio .verse { cursor: auto; }
+body.no-audio .verse:hover { background: none; }
+
+/* Prose: a paragraph per speech, the section (Stephanus) that opens it in the margin and
+   later ones marked in the text. */
+#verses.prose .verse { margin-bottom: 0.9rem; line-height: 1.6; }
+#verses.prose .num { visibility: visible; padding-top: 0.45em; }
+.speaker { color: var(--muted); font-size: 0.78em; letter-spacing: 0.05em; margin-right: 0.15em; }
+.ref-mark {
+  font: 11px system-ui, sans-serif;
+  color: var(--muted);
+  vertical-align: 0.35em;
+  padding: 0 0.1em;
+  user-select: none;
+}
+
+/* Where the position box jumped to. */
+@keyframes located { from { background-color: var(--current-bg); } to { background-color: transparent; } }
+.located { animation: located 1.8s ease-out; border-radius: 4px; }
+
+/* The library (index.html). */
+.library main { padding-bottom: 4rem; }
+.library h1 { font-weight: 400; font-size: 1.6em; margin: 0.6rem 0 0.2rem; text-align: center; }
+.library .sub { text-align: center; color: var(--muted); font: 13px system-ui, sans-serif; margin: 0 0 1.5rem; }
+.category { margin: 2rem 0 0; }
+.category > h2 {
+  font: 600 12px system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.35rem;
+  margin: 0 0 0.6rem;
+}
+.category .empty { color: var(--muted); font: italic 14px system-ui, sans-serif; margin: 0.4rem 0; }
+.work { padding: 0.55rem 0; border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); }
+.work:last-child { border-bottom: none; }
+.work-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.work-title { color: var(--text); text-decoration: none; font-size: 1.15em; }
+a.work-title:hover { color: var(--current-bar); }
+.work-author { color: var(--muted); font-size: 0.8em; }
+.books { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.books a {
+  min-width: 1.9rem;
+  padding: 0.05rem 0.35rem;
+  text-align: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.8em;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.books a:hover { color: var(--text); border-color: var(--current-bar); }
+.library .notice { color: var(--muted); font: 14px system-ui, sans-serif; text-align: center; margin-top: 2rem; }
+.library .notice code { font-size: 13px; }
+/* Verse without a paraphrase under each line: set closer. */
+body.no-paraphrase #verses:not(.prose) .verse { margin-bottom: 0.15rem; padding-top: 0.1rem; padding-bottom: 0.1rem; }
+/* Without a recording, the line or paragraph the σχόλια panel is showing. */
+body.show-scholia .verse.noted, body.scholia-popup .verse.noted { border-left-color: color-mix(in srgb, var(--current-bar) 60%, transparent); background: color-mix(in srgb, var(--current-bg) 40%, transparent); }

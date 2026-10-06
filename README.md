@@ -1,7 +1,8 @@
 # Iliad Reader
 
-A reader for Homer's *Iliad* in Greek that follows along with a recording: the verse
-being recited is highlighted as it plays, and each line comes with help for reading it.
+A reader for Greek texts that follows along with a recording: the verse being recited
+is highlighted as it plays. It began with Homer's *Iliad*, where each line comes with
+help for reading it:
 
 - **Gaza's paraphrase**: Theodorus Gaza's Byzantine prose paraphrase under each line;
   hovering a Homeric word shows its equivalent in the paraphrase (Books 1–6 so far).
@@ -18,6 +19,14 @@ being recited is highlighted as it plays, and each line comes with help for read
 Keys: Space plays or pauses, ← ↑ and → ↓ step a verse, F toggles focused mode, S shows
 the scholia.
 
+Other texts live in a **library**, the start page: texts grouped by category, read a
+book at a time with the same reader, which shows whatever each text has (prose is set
+in paragraphs, and the position box jumps to a line, or to a Stephanus section such as
+`172a`). Which texts and categories make up the library is local: list them in
+`library/catalogue.json` (git-ignored; `library/catalogue.example.json` shows the
+format, and `scripts/library.py` documents the sources it can fetch: Wikisource poems
+and Perseus prose) and build it with `python3 scripts/library.py`.
+
 ## Running it
 
 Needs Python 3 (standard library only) and, for the audio, ffmpeg.
@@ -33,7 +42,7 @@ Needs Python 3 (standard library only) and, for the audio, ffmpeg.
 4. Start the server and open the page:
 
    ```
-   python3 scripts/serve.py      # then http://localhost:8000/?book=1
+   python3 scripts/serve.py      # then http://localhost:8000/ (the Iliad: read.html?book=1)
    ```
 
 ### As an app on a phone

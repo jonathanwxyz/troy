@@ -5,8 +5,15 @@
     python3 scripts/serve.py --host 0.0.0.0  also reachable from other devices on the network
 
 Routes:
-  /                    web/index.html (and other files under web/)
-  /api/book/<n>        JSON: title, audio URL and verses (text, paraphrase, timings,
+  /                    web/index.html, the library (and other files under web/; the
+                       reader is web/read.html?text=<slug>&book=<n>)
+  /api/library         JSON: the categories and their texts, from data/library.sqlite
+                       (built by scripts/library.py from the local catalogue)
+  /api/text/<slug>/<n> JSON: one book (division) of a library text: its segments, with
+                       the shape of /api/book (verses), for the reader
+  /api/notes/<slug>/<n>/<a>-<b>  JSON: a library text's notes on its segments a..b (seq),
+                       shaped like /api/scholia
+  /api/book/<n>        JSON: an Iliad book: title, audio URL and verses (text, paraphrase, timings,
                        and per-word paraphrase equivalents where aligned; Homeric words
                        sharing a paraphrase word, e.g. a verb in tmesis, share a group id;
                        Murray's English per line where split, else as ~5-line passages;
@@ -29,6 +36,8 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 RECORDINGS = ROOT / "recordings"
 DB = ROOT / "data" / "iliad.sqlite"
+LIBRARY = ROOT / "data" / "library.sqlite"
+GREEK_NUMERALS = " ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
 MODEL = "mms"
 
 mimetypes.add_type("audio/ogg", ".opus")
@@ -86,7 +95,95 @@ def book_json(book):
                **({"groups": groups[line]} if line in groups else {})}
               for line, text, paraphrase in rows]
     return {"book": book, "audio": f"/audio/{rec[0]}" if rec else None, "verses": verses,
-            "translation": translation}
+            "translation": translation, "text": "iliad", "title": "Ἰλιάς", "author": "Ὅμηρος",
+            "eyebrow": "Ὁμήρου Ἰλιάς", "form": "verse", "cite": "line", "features": ILIAD_FEATURES,
+            "books": [{"n": b, "label": f"Ῥαψῳδία {GREEK_NUMERALS[b]}"} for b in range(1, 25)],
+            "credits": ILIAD_CREDITS, "notesCredit": ILIAD_NOTES_CREDIT}
+
+
+# What the Iliad reader has on top of a plain text, and its credits (the scholia panel
+# carries its own).
+ILIAD_FEATURES = ["audio", "paraphrase", "modern", "translation", "scholia", "words"]
+ILIAD_NOTES_CREDIT = ("Scholia: Dindorf & Maass, Scholia Graeca in Homeri Iliadem (1875–88), via "
+                      "First1KGreek, CC BY-SA 4.0 · Leaf, Seymour, Benner: via Perseus, CC BY-SA 3.0")
+ILIAD_CREDITS = [
+    {"id": "translation-credit", "text": "English: A. T. Murray (Loeb, 1924), via Perseus"},
+    {"id": "modern-credit", "text": "Μετάφραση: Ἰάκωβος Πολυλάς (1923), via Βικιθήκη"},
+]
+
+
+def library_json():
+    if not LIBRARY.exists():
+        return {"categories": [], "missing": True}
+    con = sqlite3.connect(LIBRARY)
+    books = {}
+    for text, n, label in con.execute("SELECT text, n, label FROM divisions ORDER BY text, n"):
+        books.setdefault(text, []).append({"n": n, "label": label})
+    texts = {}
+    for slug, title, author, category, reader in con.execute(
+            "SELECT slug, title, author, category, reader FROM texts ORDER BY sort"):
+        texts.setdefault(category, []).append({
+            "slug": slug, "title": title, "author": author, "reader": reader, "books": books.get(slug, [])})
+    cats = [{"name": name, "texts": texts.get(name, [])}
+            for (name,) in con.execute("SELECT name FROM categories ORDER BY sort")]
+    con.close()
+    return {"categories": cats}
+
+
+def notes_json(slug, n, a, b):
+    """A library text's notes on segments a..b, shaped like scholia_json."""
+    if not LIBRARY.exists():
+        return None
+    con = sqlite3.connect(LIBRARY)
+    sources = con.execute("SELECT id, siglum, name, lang FROM note_sources WHERE text = ? ORDER BY sort",
+                          (slug,)).fetchall()
+    ref = dict(con.execute("SELECT seq, ref FROM segments WHERE text = ? AND div = ?", (slug, n)))
+    rows = con.execute("SELECT pos_from, pos_to, source, body, parts FROM notes "
+                       "WHERE text = ? AND div = ? AND pos_from <= ? AND pos_to >= ? ORDER BY seq",
+                       (slug, n, b, a)).fetchall()
+    con.close()
+    notes = {}
+    for first, last, source, body, parts in rows:
+        span = {"from": ref[first], "to": ref[last]} if ref[first] != ref[last] else {}
+        if parts:
+            notes.setdefault(source, []).append({"parts": json.loads(parts), **span})
+        else:
+            m = LEMMA.fullmatch(body)
+            notes.setdefault(source, []).append({"lemma": m[1].strip() if m else None,
+                                                 "text": m[2] if m else body, **span})
+    return {"sources": [{"id": sid, "siglum": siglum, "name": name, "lang": lang, "notes": notes[sid]}
+                        for sid, siglum, name, lang in sources if sid in notes]}
+
+
+def text_json(slug, n):
+    if not LIBRARY.exists():
+        return None
+    con = sqlite3.connect(LIBRARY)
+    t = con.execute("SELECT title, author, form, cite, credit, notes_credit FROM texts "
+                    "WHERE slug = ? AND reader = 'text'", (slug,)).fetchone()
+    rows = con.execute("SELECT seq, ref, content, speaker, para FROM segments WHERE text = ? AND div = ? "
+                       "ORDER BY seq", (slug, n)).fetchall() if t else []
+    books = [{"n": b, "label": label} for b, label in con.execute(
+        "SELECT n, label FROM divisions WHERE text = ? ORDER BY n", (slug,))]
+    # How many notes each segment has (a note covering several counts for each).
+    notes = {}
+    for a, b in con.execute("SELECT pos_from, pos_to FROM notes WHERE text = ? AND div = ?", (slug, n)):
+        for seq in range(a, b + 1):
+            notes[seq] = notes.get(seq, 0) + 1
+    has_notes = con.execute("SELECT 1 FROM note_sources WHERE text = ? LIMIT 1", (slug,)).fetchone()
+    con.close()
+    if not rows:
+        return None
+    title, author, form, cite, credit, notes_credit = t
+    verses = [{"line": seq, "ref": ref, "text": content,
+               **({"speaker": speaker} if speaker else {}), **({"para": True} if para else {}),
+               **({"scholia": notes[seq]} if seq in notes else {})}
+              for seq, ref, content, speaker, para in rows]
+    return {"book": n, "text": slug, "title": title, "author": author, "form": form, "cite": cite,
+            "eyebrow": f"{author} · {title}" if author else title,
+            "features": ["scholia"] if has_notes else [], "notesCredit": notes_credit,
+            "books": books if len(books) > 1 else [], "audio": None, "verses": verses, "translation": [],
+            "credits": [{"text": credit}] if credit else []}
 
 
 # Sources shown in the scholia panel, in order: (id, siglum, name, language). The
@@ -211,7 +308,13 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(WEB), **kwargs)
 
     def do_GET(self):
-        if m := re.fullmatch(r"/api/book/(\d+)", self.path):
+        if self.path == "/api/library":
+            self.send_json(library_json())
+        elif m := re.fullmatch(r"/api/text/([\w-]+)/(\d+)", self.path):
+            self.send_json(text_json(m[1], int(m[2])))
+        elif m := re.fullmatch(r"/api/notes/([\w-]+)/(\d+)/(\d+)-(\d+)", self.path):
+            self.send_json(notes_json(m[1], *map(int, m.groups()[1:])))
+        elif m := re.fullmatch(r"/api/book/(\d+)", self.path):
             self.send_json(book_json(int(m[1])))
         elif m := re.fullmatch(r"/api/word/(\d+)/(\d+)/(\d+)", self.path):
             self.send_json(word_json(*map(int, m.groups())))
