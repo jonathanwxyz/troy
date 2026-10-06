@@ -36,7 +36,9 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-padding-top: 4rem; scroll-padding-bottom: 120px; }
+html { scroll-padding-top: 4rem; scroll-padding-bottom: 120px; overflow-x: clip; }
+/* Feel like an app on phones: no double-tap zoom (pinch zoom is off in the viewport tag). */
+body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -69,8 +71,11 @@ main {
   align-items: center;
   gap: 0.6rem;
 }
-.eyebrow { color: var(--muted); letter-spacing: 0.06em; font-size: 0.85em; white-space: nowrap; }
+.eyebrow { color: var(--muted); letter-spacing: 0.06em; font-size: 0.85em; white-space: nowrap;
+           min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #book-select {
+  min-width: 0;
+  max-width: 100%;
   font: inherit;
   font-size: 1.05em;
   color: var(--text);
@@ -445,6 +450,10 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   backdrop-filter: blur(6px);
   border-top: 1px solid var(--rule);
   padding: 0.6rem 16px calc(0.6rem + env(safe-area-inset-bottom));
+  /* Above the focused-mode animations, and on its own layer: iOS otherwise drops a
+     blurred fixed bar while the lines beneath it animate. */
+  z-index: 4;
+  transform: translateZ(0);
 }
 #player audio { display: none; }
 
@@ -553,6 +562,7 @@ body.muted #mute .vol-x { display: inline; }
 body.focused .credits { display: none; }
 body.focused main {
   min-height: calc(100vh - 10.5rem);
+  min-height: calc(100svh - 10.5rem);  /* phones: the visible height, toolbars shown */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -605,6 +615,12 @@ body.focused .verse.f-cur .seek-icon { display: none; }
 
 @media (max-width: 520px) {
   body { font-size: 21px; }
+  .topbar-inner { gap: 0.4rem; }
+  .to-start-text { display: none; }  /* icon only */
+  #to-start { padding: 0; width: 1.85rem; height: 1.85rem; justify-content: center; flex-shrink: 0; }
+  #theme, #home { flex-shrink: 0; }
+  /* iPhones zoom in on any text box under 16px when it's tapped. */
+  input, select, textarea { font-size: 16px !important; }
   .trans { margin-left: calc(2.2rem + 3px + 0.5rem); }
   .verse { grid-template-columns: 2.2rem 1fr; column-gap: 0.5rem; }
   .verse:not(.untimed):hover .num { visibility: hidden; }  /* narrow column: the icon takes its place */
