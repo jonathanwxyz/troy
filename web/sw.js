@@ -5,11 +5,11 @@
 // and scholia already seen stay readable. Fonts never change, so they come from the
 // cache once fetched. Audio is left to the browser: it is fetched in byte ranges, which
 // a plain cache can't answer.
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const FONTS = "fonts";  // kept across versions
-const SHELL_FILES = ["./", "index.html", "home.js", "read.html", "app.js", "style.css", "manifest.webmanifest",
+const SHELL_FILES = ["./", "index.html", "home.js", "read.html", "app.js", "theme.js", "style.css", "manifest.webmanifest",
                      "icons/icon-192.png", "icons/icon-512.png", "icons/icon-180.png", "icons/icon-32.png"];
 
 self.addEventListener("install", (e) => {

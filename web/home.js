@@ -10,8 +10,7 @@ function el(tag, cls, text) {
 }
 
 function readerHref(text, book) {
-  const q = new URLSearchParams(text.reader === "iliad" ? {} : { text: text.slug });
-  q.set("book", book);
+  const q = new URLSearchParams({ text: text.reader === "iliad" ? "iliad" : text.slug, book });
   return `read.html?${q}`;
 }
 

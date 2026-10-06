@@ -39,6 +39,8 @@
 html { scroll-padding-top: 4rem; scroll-padding-bottom: 120px; overflow-x: clip; }
 /* Feel like an app on phones: no double-tap zoom (pinch zoom is off in the viewport tag). */
 body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
+/* No blue box flashing over whatever is tapped. */
+html { -webkit-tap-highlight-color: transparent; }
 body {
   margin: 0;
   background: var(--bg);
@@ -48,6 +50,7 @@ body {
   line-height: 1.55;
 }
 main {
+  font-size: calc(var(--text-scale, 1) * 1em);  /* the reader's Text size */
   max-width: 44rem;
   margin: 0 auto;
   padding: 1.5rem 16px 9rem;
@@ -154,6 +157,56 @@ main {
   cursor: pointer;
 }
 #theme:hover { color: var(--text); border-color: var(--current-bar); }
+/* The bars and their controls, at the reader's Interface size. */
+#topbar, #player { zoom: var(--ui-scale, 1); }
+
+/* Text size menu (Aa): text and interface, each stepped smaller or larger. */
+#size-picker { position: relative; flex: none; }
+#size-button {
+  height: 1.85rem;
+  padding: 0 0.45rem;
+  font: 15px var(--greek);
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 0.95rem;
+  cursor: pointer;
+}
+#size-button:hover, #size-button[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
+#size-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 7;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font: 14px system-ui, sans-serif;
+  color: var(--muted);
+  white-space: nowrap;
+}
+#size-menu[hidden] { display: none; }
+.size-row { display: grid; grid-template-columns: 5.2rem 2rem 3.2rem 2rem; align-items: center; }
+.size-value { text-align: center; font-variant-numeric: tabular-nums; color: var(--text); }
+.size-step {
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 18px system-ui, sans-serif;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.size-step:hover:not(:disabled) { color: var(--text); border-color: var(--current-bar); }
+.size-step:disabled { opacity: 0.35; cursor: default; }
 #theme svg { display: none; }
 #theme[data-mode="auto"] .th-auto, #theme[data-mode="light"] .th-light, #theme[data-mode="dark"] .th-dark { display: block; }
 .credits { text-align: center; margin-bottom: 1rem; }
@@ -273,7 +326,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
   padding: 1rem 1.1rem 1.1rem;
   overflow-y: auto;
-  font-size: 18.5px;
+  font-size: calc(18.5px * var(--text-scale, 1));
   line-height: 1.45;
 }
 #card-close {
@@ -331,7 +384,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   border: 1px solid var(--rule);
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
-  font-size: 18px;
+  font-size: calc(18px * var(--text-scale, 1));
   line-height: 1.5;
 }
 #scholia[hidden] { display: none; }
@@ -374,7 +427,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   user-select: none;
 }
 .sch-src summary::-webkit-details-marker { display: none; }
-.sch-src summary::before { content: "▸"; font-size: 11px; transition: transform 120ms ease; }
+.sch-src summary::before { content: "▸"; font-size: 16px; line-height: 1; transition: transform 120ms ease; }
 .sch-src[open] summary::before { transform: rotate(90deg); }
 .sch-src summary:hover { color: var(--text); }
 .siglum {
@@ -734,7 +787,18 @@ body.no-audio .verse:hover { background: none; }
 .located { animation: located 1.8s ease-out; border-radius: 4px; }
 
 /* The library (index.html). */
-.library main { padding-bottom: 4rem; }
+/* The library is all navigation: it follows the reader's Interface size, not Text. */
+.library main { padding-bottom: 4rem; font-size: 1em; }
+.library main, .library-tools { zoom: var(--ui-scale, 1); }
+.library-tools {
+  position: absolute;
+  top: calc(0.9rem + env(safe-area-inset-top));
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
 .library h1 { font-weight: 400; font-size: 1.6em; margin: 0.6rem 0 0.2rem; text-align: center; }
 .library .sub { text-align: center; color: var(--muted); font: 13px system-ui, sans-serif; margin: 0 0 1.5rem; }
 .category { margin: 2rem 0 0; }

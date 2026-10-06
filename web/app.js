@@ -1,11 +1,13 @@
 // Reader: shows one book of a text and, where there is a recording, highlights the verse
-// being recited. read.html?text=<slug>&book=<n>; the Iliad (the default text) comes from
+// being recited. read.html?text=<slug>&book=<n>; the Iliad (text=iliad, the default) comes from
 // its own API, with Gaza's paraphrase, translations, scholia and parsing. Library texts
 // have only what their data offers (data.features); prose (Plato) is set as paragraphs
 // with its sections (Stephanus) marked.
 const PARAMS = new URLSearchParams(location.search);
 const TEXT = PARAMS.get("text") || "iliad";
 const BOOK = Number(PARAMS.get("book") || 1);
+// Old links (?book=N, the Iliad) show the full address: ?text=iliad&book=N.
+if (!PARAMS.has("text")) history.replaceState(null, "", `?${new URLSearchParams({ text: TEXT, book: BOOK })}${location.hash}`);
 const API = TEXT === "iliad" ? `/api/book/${BOOK}` : `/api/text/${encodeURIComponent(TEXT)}/${BOOK}`;
 let hasScholia = TEXT === "iliad";  // known for sure once the book has loaded
 const FEATURES = ["audio", "paraphrase", "modern", "translation", "scholia", "words"];
@@ -827,15 +829,26 @@ holdOnHover.addEventListener("change", () => {
   if (!holdOnHover.checked) { clearHold(); update(); }
 });
 
-// The bars' heights, for focused mode to fit the verses between them (style.css).
-if (typeof ResizeObserver === "function") {
+// The bars' heights, for focused mode to fit the verses between them (style.css). Their
+// size on screen, which includes the Interface size (CSS zoom).
+function measureBars() {
   for (const [id, name] of [["topbar", "--topbar-h"], ["player", "--player-h"]]) {
-    const bar = document.getElementById(id);
-    new ResizeObserver(() => {
-      document.documentElement.style.setProperty(name, `${bar.offsetHeight}px`);
-    }).observe(bar);
+    const h = document.getElementById(id).getBoundingClientRect().height;
+    document.documentElement.style.setProperty(name, `${h}px`);
   }
 }
+if (typeof ResizeObserver === "function") {
+  const bars = new ResizeObserver(measureBars);
+  for (const id of ["topbar", "player"]) bars.observe(document.getElementById(id));
+}
+measureBars();
+
+// After a size change in the Aa menu (theme.js): refit focused mode, the card and the view.
+document.addEventListener("sizechange", () => {
+  measureBars();
+  placeCard();
+  if (!focused.checked && current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+});
 
 // Focused mode toggle (F), remembered per browser.
 function applyFocused() {
@@ -982,7 +995,7 @@ showVolume();
 
 // Buttons don't keep keyboard focus after a click, so Space stays play/pause (rather
 // than pressing the last-clicked button again on top of it).
-for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, #theme, .toggle, #scholia-close, .sch-btn")) {
+for (const b of document.querySelectorAll(".tbtn, #focus-controls button, #to-start, #theme, #size-button, .size-step, .toggle, #scholia-close, .sch-btn")) {
   b.addEventListener("mousedown", (e) => e.preventDefault());
 }
 
@@ -992,35 +1005,10 @@ document.getElementById("to-start").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-// Theme switch: automatic (the system's choice) -> light -> dark, remembered per browser.
-// index.html applies the stored theme before the page draws.
-const themeButton = document.getElementById("theme");
-const THEMES = ["auto", "light", "dark"];
-const THEME_NAMES = { auto: "automatic (as the system)", light: "light", dark: "dark" };
-const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)");
-function showTheme() {
-  const mode = document.documentElement.dataset.theme ?? "auto";
-  themeButton.dataset.mode = mode;
-  themeButton.title = `Theme: ${THEME_NAMES[mode]}. Click to change.`;
-  // The phone's status bar (installed app) takes the page's background colour.
-  const dark = mode === "dark" || (mode === "auto" && !!systemDark?.matches);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#1d1a16" : "#fdf6e3");
-}
-systemDark?.addEventListener?.("change", showTheme);
-themeButton.addEventListener("click", () => {
-  const mode = THEMES[(THEMES.indexOf(themeButton.dataset.mode) + 1) % THEMES.length];
-  if (mode === "auto") delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = mode;
-  try { localStorage.setItem("theme", mode); } catch {}
-  showTheme();
-});
-showTheme();
-
 // Book picker (hidden for a work in one piece): a menu of links to the other books.
 function fillBooks(books) {
   bookMenu.replaceChildren(...books.map((b) => {
-    const q = new URLSearchParams(TEXT === "iliad" ? {} : { text: TEXT });
-    q.set("book", b.n);
+    const q = new URLSearchParams({ text: TEXT, book: b.n });
     const li = document.createElement("li");
     li.setAttribute("role", "option");
     li.setAttribute("aria-selected", String(b.n === BOOK));
@@ -1070,7 +1058,7 @@ bookPicker.addEventListener("focusout", (e) => {
 
 document.addEventListener("keydown", (e) => {
   // Typing in the line box is left alone; on a slider the arrow keys move the slider.
-  if (e.target.closest?.('input[type="text"], textarea, select, #book-picker')) return;
+  if (e.target.closest?.('input[type="text"], textarea, select, #book-picker, #size-picker')) return;
   if (e.target.type === "range" && e.key.startsWith("Arrow")) return;
   if (e.key === " ") { e.preventDefault(); togglePlay(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }

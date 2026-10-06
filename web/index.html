@@ -16,6 +16,13 @@
   // Old links to the reader (/?book=N) still work.
   if (new URLSearchParams(location.search).has("book")) location.replace("read.html" + location.search);
   try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+  // Text and interface sizes (the reader's Aa menu), likewise; the library uses the interface one.
+  try {
+    for (const [key, prop] of [["textScale", "--text-scale"], ["uiScale", "--ui-scale"]]) {
+      const v = parseFloat(localStorage.getItem(key));
+      if (v > 0) document.documentElement.style.setProperty(prop, v);
+    }
+  } catch {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,11 +30,36 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="library">
+<div class="library-tools">
+  <div id="size-picker">
+    <button id="size-button" title="Text size" aria-label="Text size" aria-haspopup="dialog" aria-expanded="false" aria-controls="size-menu">Aa</button>
+    <div id="size-menu" role="dialog" aria-label="Text size" hidden>
+      <div class="size-row" data-key="textScale" data-prop="--text-scale">
+        <span class="size-name">Text</span>
+        <button class="size-step" data-step="-1" aria-label="Smaller text">−</button>
+        <output class="size-value">100%</output>
+        <button class="size-step" data-step="1" aria-label="Larger text">+</button>
+      </div>
+      <div class="size-row" data-key="uiScale" data-prop="--ui-scale">
+        <span class="size-name">Interface</span>
+        <button class="size-step" data-step="-1" aria-label="Smaller interface">−</button>
+        <output class="size-value">100%</output>
+        <button class="size-step" data-step="1" aria-label="Larger interface">+</button>
+      </div>
+    </div>
+  </div>
+  <button id="theme" aria-label="Theme">
+    <svg class="th-auto" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 4a8 8 0 0 1 0 16z"/></svg>
+    <svg class="th-light" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg>
+    <svg class="th-dark" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+  </button>
+</div>
 <main>
   <h1>Βιβλιοθήκη</h1>
   <p class="sub">Library</p>
   <div id="library" aria-live="polite"></div>
 </main>
+<script src="theme.js"></script>
 <script src="home.js"></script>
 </body>
 </html>
