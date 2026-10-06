@@ -4,7 +4,7 @@ A reader for Homer's *Iliad* in Greek that follows along with a recording: the v
 being recited is highlighted as it plays, and each line comes with help for reading it.
 
 - **Gaza's paraphrase**: Theodorus Gaza's Byzantine prose paraphrase under each line;
-  hovering a Homeric word shows its equivalent in the paraphrase (Books 1–2 so far).
+  hovering a Homeric word shows its equivalent in the paraphrase (Books 1–6 so far).
 - **Word cards**: click a word for its lemma, a short definition, its morphology and its
   role in the sentence (from the Perseus treebank).
 - **Translations**: A. T. Murray's English (line by line in Book 1, in short passages
