@@ -806,14 +806,12 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected) closeCard(); });
 
 // Track which verse's text the pointer is on; leaving a held verse resumes playback.
-// A mouse only: a tap on a touch screen would leave its verse "hovered" until the next tap.
-list.addEventListener("pointerover", (e) => {
-  if (e.pointerType !== "mouse") return;
+// On a touch screen a tap counts: the tapped verse holds until a tap elsewhere.
+list.addEventListener("mouseover", (e) => {
   const text = e.target.closest(".text");
   if (text) hovered = entryOf.get(text.closest(".verse")) ?? null;
 });
-list.addEventListener("pointerout", (e) => {
-  if (e.pointerType !== "mouse") return;
+list.addEventListener("mouseout", (e) => {
   const text = e.target.closest(".text");
   if (!text || text.contains(e.relatedTarget)) return;
   hovered = null;
