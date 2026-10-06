@@ -84,6 +84,13 @@
     showSizes();
     showFont();
     sizeMenu.hidden = false;
+    // Keep it on screen: it hangs from the button's right edge, so on a narrow screen
+    // move it right (into the space beside the button) rather than off the left edge.
+    sizeMenu.style.right = "";
+    const r = sizeMenu.getBoundingClientRect();
+    const shift = Math.min(Math.max(0, 8 - r.left), Math.max(0, innerWidth - 8 - r.right));
+    const zoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ui-scale")) || 1;
+    if (shift) sizeMenu.style.right = `${-shift / zoom}px`;
     sizeButton.setAttribute("aria-expanded", "true");
   });
   document.addEventListener("pointerdown", (e) => { if (!sizePicker.contains(e.target)) closeSizes(); });

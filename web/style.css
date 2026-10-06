@@ -192,10 +192,13 @@ main {
   font: 14px system-ui, sans-serif;
   color: var(--muted);
   white-space: nowrap;
+  max-width: calc(100vw / var(--ui-scale, 1) - 16px);  /* in the bar's (zoomed) units */
 }
 #size-menu[hidden] { display: none; }
 .size-row { display: grid; grid-template-columns: 5.2rem 2rem 3.2rem 2rem; align-items: center; }
 .font-row { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem; }
+/* The choices wrap among themselves, beside the label rather than under it. */
+.font-choices { display: flex; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
 .font-row .size-name { width: 5.2rem; flex: none; }
 .font-choice {
   padding: 0.2rem 0.5rem;
