@@ -32,7 +32,6 @@ const holdOnHover = document.getElementById("hold-on-hover");
 const focused = document.getElementById("focused");
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
-const focusControls = document.getElementById("focus-controls");
 const bookPicker = document.getElementById("book-picker");
 const bookSelect = document.getElementById("book-select");
 const bookMenu = document.getElementById("book-menu");
@@ -266,7 +265,6 @@ function setFocus(i) {
   verses[i - 1]?.el.classList.add("f-prev");
   verses[i]?.el.classList.add("f-cur");
   verses[i + 1]?.el.classList.add("f-next");
-  if (verses[i]) verses[i].el.append(focusControls);
   if (!animate) return;
 
   const now = [i - 1, i, i + 1].map((k) => verses[k]?.el).filter(Boolean);
@@ -831,6 +829,16 @@ holdOnHover.addEventListener("change", () => {
   if (!holdOnHover.checked) { clearHold(); update(); }
 });
 
+// The bars' heights, for focused mode to fit the verses between them (style.css).
+if (typeof ResizeObserver === "function") {
+  for (const [id, name] of [["topbar", "--topbar-h"], ["player", "--player-h"]]) {
+    const bar = document.getElementById(id);
+    new ResizeObserver(() => {
+      document.documentElement.style.setProperty(name, `${bar.offsetHeight}px`);
+    }).observe(bar);
+  }
+}
+
 // Focused mode toggle (F), remembered per browser.
 function applyFocused() {
   document.body.classList.toggle("focused", focused.checked);
@@ -847,23 +855,21 @@ for (const ev of ["wheel", "touchmove"]) {
   window.addEventListener(ev, () => { lastUserScroll = Date.now(); }, { passive: true });
 }
 
-// Focused mode: scrolling (wheel or swipe) steps through the verses. If the page is
-// taller than the window (a long verse on a phone), it scrolls as usual until the edge.
+// Focused mode: scrolling (wheel or swipe) steps through the verses (the page itself
+// doesn't scroll there).
 const WHEEL_STEP = 60;      // px of wheel travel per verse
 const WHEEL_LOCK_MS = 450;  // after a step, one gesture (or trackpad momentum) won't step again...
 const WHEEL_QUIET_MS = 150; // ...until the wheel has been still this long
 let wheelSum = 0, wheelStepAt = 0, wheelLastAt = 0;
 
-function stepsVerses(e, dir) {
+function stepsVerses(e) {
   if (!focused.checked || !verses.length || document.body.classList.contains("no-audio")) return false;
-  if (e.target.closest?.("#scholia, #card, #player, #topbar")) return false;
-  const root = document.scrollingElement ?? document.documentElement;
-  return dir > 0 ? scrollY + innerHeight >= root.scrollHeight - 2 : scrollY <= 2;
+  return !e.target.closest?.("#scholia, #card, #player, #topbar");
 }
 function stepBy(dir) { seekTo(Math.min(Math.max(focusIdx + dir, 0), verses.length - 1)); }
 
 window.addEventListener("wheel", (e) => {
-  if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY) || !stepsVerses(e, Math.sign(e.deltaY))) return;
+  if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY) || !stepsVerses(e)) return;
   e.preventDefault();
   const now = Date.now();
   const quiet = now - wheelLastAt > WHEEL_QUIET_MS;
@@ -886,14 +892,14 @@ window.addEventListener("touchstart", (e) => {
 window.addEventListener("touchmove", (e) => {
   if (!touchFrom || e.touches.length !== 1) return;
   const dy = touchFrom.y - e.touches[0].clientY;
-  if (dy && stepsVerses(e, Math.sign(dy))) e.preventDefault();  // no native scroll or bounce
+  if (dy && stepsVerses(e)) e.preventDefault();  // no native scroll or bounce
 }, { passive: false });
 window.addEventListener("touchend", (e) => {
   if (!touchFrom) return;
   const t = e.changedTouches[0];
   const dx = touchFrom.x - t.clientX, dy = touchFrom.y - t.clientY;
   touchFrom = null;
-  if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) && stepsVerses(e, Math.sign(dy))) stepBy(Math.sign(dy));
+  if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) && stepsVerses(e)) stepBy(Math.sign(dy));
 });
 
 // Stepping keeps the play state: a paused reader stays paused on the new verse.
@@ -905,10 +911,11 @@ function stepBack() {
 function stepForward() {
   seekTo(Math.min(verseAt(audio.currentTime) + 1, verses.length - 1));
 }
+
 document.getElementById("prev").addEventListener("click", stepBack);
 document.getElementById("next").addEventListener("click", stepForward);
 
-// Focused-mode controls live inside the current row: keep their clicks from seeking it.
+// Focused-mode controls: previous, play/pause, next.
 for (const [id, action] of [["fc-prev", stepBack], ["fc-play", togglePlay], ["fc-next", stepForward]]) {
   document.getElementById(id).addEventListener("click", (e) => { e.stopPropagation(); action(); });
 }

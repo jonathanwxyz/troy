@@ -496,8 +496,8 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 }
 #player audio { display: none; }
 
-/* Media bar: volume, timeline, line box, verse steps and play/pause (on the right, for
-   the thumb of a phone held in the right hand). */
+/* Media bar: volume, previous / play-pause / next, line box and timeline. */
+.playback { flex: none; display: inline-flex; align-items: center; gap: 0.45rem; }
 .transport {
   max-width: 44rem;
   margin: 0 auto;
@@ -574,11 +574,12 @@ body.muted #mute .vol-x { display: inline; }
   color: var(--muted);
 }
 
-/* Narrow screens: the timeline gets a row of its own. */
+/* Narrow screens: volume, the play buttons (centred) and the line on one row, the timeline below. */
 @media (max-width: 600px) {
-  .transport { flex-wrap: wrap; }
-  .timeline { order: 5; flex-basis: 100%; }
-  #position { margin-left: auto; }
+  .transport { display: grid; grid-template-columns: 1fr auto 1fr; row-gap: 0.35rem; }
+  .volume { justify-self: start; }
+  #position { justify-self: end; }
+  .timeline { grid-column: 1 / -1; }
 }
 
 #position {
@@ -598,19 +599,33 @@ body.muted #mute .vol-x { display: inline; }
 #position.invalid { border-color: #c0392b; }
 .toggle { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
 
-/* Focused mode: only the current verse (large, centred) and its neighbours. */
+/* Focused mode: only the current verse (large, centred) and its neighbours, in exactly
+   the space between the bars: the page never scrolls. The current verse is always shown
+   whole; a long neighbour is cut off at the edge rather than pushing it out of view.
+   (--topbar-h and --player-h are the bars' heights, kept up to date by app.js.) */
+html:has(body.focused) { overflow: hidden; }
 body.focused .credits { display: none; }
 body.focused main {
-  min-height: calc(100vh - 10.5rem);
-  min-height: calc(100svh - 10.5rem);  /* phones: the visible height, toolbars shown */
+  height: calc(100vh - var(--topbar-h, 3rem) - var(--player-h, 7rem));
+  height: calc(100svh - var(--topbar-h, 3rem) - var(--player-h, 7rem));  /* phones: toolbars shown */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding-top: 1.5rem;
-  padding-bottom: 8.5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+body.focused #verses {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  overflow-y: clip;
+  overflow-x: visible;  /* the step buttons sit in the left margin */
 }
 body.focused #verses > li:not(.f-cur):not(.f-prev):not(.f-next) { display: none; }
 body.focused #verses > li.trans { display: none; }
+body.focused .verse.f-prev { grid-row: 1; align-self: end; }
+body.focused .verse.f-cur { grid-row: 2; }
+body.focused .verse.f-next { grid-row: 3; align-self: start; }
 body.focused .verse { transition: opacity 200ms ease; }
 /* The neighbours are context only: no hover, highlight or clicks. */
 body.focused .verse.f-prev,
@@ -619,16 +634,19 @@ body.focused .verse.f-cur { font-size: 1.3em; margin: 1.4rem 0; padding-top: 0.5
 body.focused .verse.f-cur .num { visibility: visible; }
 /* Phones: sit the verse lower, leaving room for a word's card above it. */
 @media (max-width: 600px) {
-  body.focused main { padding-top: max(1.5rem, 18svh); }
+  body.focused #verses { grid-template-rows: minmax(0, 3fr) auto minmax(0, 2fr); }
 }
 
-/* Focused mode: previous / play-pause / next, stacked beside the current verse. */
+/* Focused mode: previous / play-pause / next, stacked at the left of the reading area.
+   They stay put while the verses change beside them. */
 #focus-controls { display: none; }
-body.focused .verse.f-cur > #focus-controls {
+body.focused main { position: relative; }
+body.focused #focus-controls {
   position: absolute;
-  left: -3rem;
+  left: calc(16px - 3rem);
   top: 50%;
   transform: translateY(-50%);
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -651,10 +669,16 @@ body.focused .verse.f-cur > #focus-controls {
 #fc-play .icon-pause, body.playing #fc-play .icon-play { display: none; }
 body.playing #fc-play .icon-pause { display: block; }
 body.focused .verse.f-cur .seek-icon { display: none; }
-/* Too narrow for the left margin: put the controls in the line-number column. */
+/* Too narrow for the left margin: the controls take a gutter of their own, and the
+   verses (and their highlight) start to the right of it. */
 @media (max-width: 52rem) {
-  body.focused .verse.f-cur > #focus-controls { left: 0.2rem; }
-  body.focused .verse.f-cur .num { visibility: hidden; }
+  body.focused #focus-controls { left: 8px; }
+  body.focused #verses { padding-left: 2.1rem; }
+}
+/* Phones: no buttons (the media bar and swipes step verses), so no gutter either. */
+@media (max-width: 600px) {
+  body.focused #focus-controls { display: none; }
+  body.focused #verses { padding-left: 0; }
 }
 
 @media (max-width: 520px) {
@@ -682,12 +706,12 @@ body.focused .verse.f-cur .seek-icon { display: none; }
 
 /* Only the controls a text has data for: a library text without a recording keeps the
    position box (for jumping to a line or section). */
-body.no-audio #prev, body.no-audio #play, body.no-audio #next, body.no-audio .timeline, body.no-audio .volume,
+body.no-audio .playback, body.no-audio .timeline, body.no-audio .volume,
 body.no-audio .toggle:has(#focused), body.no-audio .toggle:has(#hold-on-hover), body.no-audio .toggle:has(#follow),
 body.no-paraphrase .toggle:has(#show-paraphrase), body.no-modern .toggle:has(#show-modern),
 body.no-translation .toggle:has(#show-translation), body.no-scholia .toggle:has(#show-scholia) { display: none; }
 body.no-audio.no-paraphrase.no-modern.no-translation.no-scholia .controls { display: none; }
-body.no-audio .transport { justify-content: center; }
+body.no-audio .transport { display: flex; justify-content: center; }
 body.no-audio #position { width: 8rem; margin-left: 0; border-color: var(--rule); }
 body.no-audio .verse { cursor: auto; }
 body.no-audio .verse:hover { background: none; }
