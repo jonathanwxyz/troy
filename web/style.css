@@ -10,6 +10,10 @@
   --greek: "EB Garamond", "Gentium Book Plus", "Noto Serif", "Times New Roman", serif;
   color-scheme: light;  /* native controls (the book list, scrollbars) follow the theme */
 }
+/* The font for the Greek (the Aa menu). Garamond runs small, so the text is set about 10%
+   larger for it; the others take that back with --font-scale. */
+:root[data-font="gentium"] { --greek: "Gentium Book Plus", "GFS Didot", "Noto Serif", "Times New Roman", serif; --font-scale: 0.91; }
+:root[data-font="didot"] { --greek: "GFS Didot", "Gentium Book Plus", "Noto Serif", "Times New Roman", serif; --font-scale: 0.91; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1d1a16;
@@ -50,7 +54,7 @@ body {
   line-height: 1.55;
 }
 main {
-  font-size: calc(var(--text-scale, 1) * 1em);  /* the reader's Text size */
+  font-size: calc(var(--text-scale, 1) * var(--font-scale, 1) * 1em);  /* the reader's Text size */
   max-width: 44rem;
   margin: 0 auto;
   padding: 1.5rem 16px 9rem;
@@ -191,6 +195,22 @@ main {
 }
 #size-menu[hidden] { display: none; }
 .size-row { display: grid; grid-template-columns: 5.2rem 2rem 3.2rem 2rem; align-items: center; }
+.font-row { display: flex; align-items: center; gap: 0.3rem; margin-top: 0.15rem; }
+.font-row .size-name { width: 5.2rem; flex: none; }
+.font-choice {
+  padding: 0.2rem 0.5rem;
+  font-size: 17px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.font-choice[data-font="garamond"] { font-family: "EB Garamond", serif; }
+.font-choice[data-font="gentium"] { font-family: "Gentium Book Plus", serif; font-size: 15.5px; }
+.font-choice[data-font="didot"] { font-family: "GFS Didot", serif; font-size: 15.5px; }
+.font-choice:hover { color: var(--text); border-color: var(--current-bar); }
+.font-choice[aria-pressed="true"] { color: var(--text); border-color: var(--current-bar); background: var(--current-bg); }
 .size-value { text-align: center; font-variant-numeric: tabular-nums; color: var(--text); }
 .size-step {
   width: 2rem;
@@ -326,7 +346,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
   padding: 1rem 1.1rem 1.1rem;
   overflow-y: auto;
-  font-size: calc(18.5px * var(--text-scale, 1));
+  font-size: calc(18.5px * var(--text-scale, 1) * var(--font-scale, 1));
   line-height: 1.45;
 }
 #card-close {
@@ -384,7 +404,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   border: 1px solid var(--rule);
   border-radius: 10px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
-  font-size: calc(18px * var(--text-scale, 1));
+  font-size: calc(18px * var(--text-scale, 1) * var(--font-scale, 1));
   line-height: 1.5;
 }
 #scholia[hidden] { display: none; }

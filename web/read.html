@@ -14,7 +14,7 @@
 <title>Reader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=GFS+Didot&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
   // The chosen theme, applied before the page draws (no flash of the other one).
@@ -26,6 +26,8 @@
       if (v > 0) document.documentElement.style.setProperty(prop, v);
     }
   } catch {}
+  // And the font for the Greek (EB Garamond unless another was chosen).
+  try { const f = localStorage.getItem("font"); if (f === "gentium" || f === "didot") document.documentElement.dataset.font = f; } catch {}
 </script>
 </head>
 <body>
@@ -47,8 +49,8 @@
       <span class="to-start-text">beginning</span>
     </button>
     <div id="size-picker">
-      <button id="size-button" title="Text size" aria-label="Text size" aria-haspopup="dialog" aria-expanded="false" aria-controls="size-menu">Aa</button>
-      <div id="size-menu" role="dialog" aria-label="Text size" hidden>
+      <button id="size-button" title="Text size and font" aria-label="Text size and font" aria-haspopup="dialog" aria-expanded="false" aria-controls="size-menu">Aa</button>
+      <div id="size-menu" role="dialog" aria-label="Text size and font" hidden>
         <div class="size-row" data-key="textScale" data-prop="--text-scale">
           <span class="size-name">Text</span>
           <button class="size-step" data-step="-1" aria-label="Smaller text">−</button>
@@ -60,6 +62,12 @@
           <button class="size-step" data-step="-1" aria-label="Smaller interface">−</button>
           <output class="size-value">100%</output>
           <button class="size-step" data-step="1" aria-label="Larger interface">+</button>
+        </div>
+        <div class="font-row" role="group" aria-label="Font">
+          <span class="size-name">Font</span>
+          <button class="font-choice" data-font="garamond" aria-pressed="false">Garamond</button>
+          <button class="font-choice" data-font="gentium" aria-pressed="false">Gentium</button>
+          <button class="font-choice" data-font="didot" aria-pressed="false">Didot</button>
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@
 // and scholia already seen stay readable. Fonts never change, so they come from the
 // cache once fetched. Audio is left to the browser: it is fetched in byte ranges, which
 // a plain cache can't answer.
-const VERSION = "v5";
+const VERSION = "v6";
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const FONTS = "fonts";  // kept across versions
