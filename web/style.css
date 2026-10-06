@@ -73,9 +73,16 @@ main {
 }
 .eyebrow { color: var(--muted); letter-spacing: 0.06em; font-size: 0.85em; white-space: nowrap;
            min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Book picker: a button and a short menu under it (a native select fills a phone's
+   screen with its list). */
+#book-picker { position: relative; min-width: 0; }
+#book-picker[hidden] { display: none; }
 #book-select {
   min-width: 0;
   max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font: inherit;
   font-size: 1.05em;
   color: var(--text);
@@ -85,8 +92,40 @@ main {
   padding: 0.1rem 0.3rem;
   cursor: pointer;
 }
-#book-select:hover, #book-select:focus { border-color: var(--rule); outline: none; }
-#book-select option { background: var(--bg); color: var(--text); }
+#book-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#book-select svg { flex: none; color: var(--muted); }
+#book-select:hover, #book-select:focus-visible, #book-select[aria-expanded="true"] { border-color: var(--rule); outline: none; }
+#book-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 7;
+  min-width: 11rem;
+  max-width: calc(100vw - 32px);
+  max-height: min(50vh, 24rem);
+  max-height: min(50dvh, 24rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0.3rem 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font-size: 16px;
+}
+#book-menu a {
+  display: block;
+  padding: 0.45rem 0.9rem;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#book-menu a:hover, #book-menu a:focus-visible { background: var(--current-bg); outline: none; }
+#book-menu [aria-selected="true"] a { color: var(--current-bar); font-weight: 600; }
 #to-start {
   margin-left: auto;
   display: inline-flex;
@@ -415,9 +454,9 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     z-index: 6;
     top: 50%;
     left: 50%;
-    width: min(40rem, calc(100vw - 16px));
-    max-height: calc(100vh - 2.5rem);
-    max-height: calc(100dvh - 2.5rem);
+    width: min(40rem, calc(100vw - 32px));
+    max-height: min(70vh, 36rem);
+    max-height: min(70dvh, 36rem);
     transform: translate(-50%, -50%);
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
   }
@@ -457,7 +496,8 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 }
 #player audio { display: none; }
 
-/* Media bar: verse steps, play/pause, line box, timeline and volume. */
+/* Media bar: volume, timeline, line box, verse steps and play/pause (on the right, for
+   the thumb of a phone held in the right hand). */
 .transport {
   max-width: 44rem;
   margin: 0 auto;
@@ -538,7 +578,7 @@ body.muted #mute .vol-x { display: inline; }
 @media (max-width: 600px) {
   .transport { flex-wrap: wrap; }
   .timeline { order: 5; flex-basis: 100%; }
-  .volume { margin-left: auto; }
+  #position { margin-left: auto; }
 }
 
 #position {
@@ -577,6 +617,10 @@ body.focused .verse.f-prev,
 body.focused .verse.f-next { opacity: 0.4; pointer-events: none; }
 body.focused .verse.f-cur { font-size: 1.3em; margin: 1.4rem 0; padding-top: 0.5rem; padding-bottom: 0.6rem; }
 body.focused .verse.f-cur .num { visibility: visible; }
+/* Phones: sit the verse lower, leaving room for a word's card above it. */
+@media (max-width: 600px) {
+  body.focused main { padding-top: max(1.5rem, 18svh); }
+}
 
 /* Focused mode: previous / play-pause / next, stacked beside the current verse. */
 #focus-controls { display: none; }
@@ -644,7 +688,7 @@ body.no-paraphrase .toggle:has(#show-paraphrase), body.no-modern .toggle:has(#sh
 body.no-translation .toggle:has(#show-translation), body.no-scholia .toggle:has(#show-scholia) { display: none; }
 body.no-audio.no-paraphrase.no-modern.no-translation.no-scholia .controls { display: none; }
 body.no-audio .transport { justify-content: center; }
-body.no-audio #position { width: 8rem; border-color: var(--rule); }
+body.no-audio #position { width: 8rem; margin-left: 0; border-color: var(--rule); }
 body.no-audio .verse { cursor: auto; }
 body.no-audio .verse:hover { background: none; }
 

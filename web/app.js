@@ -33,7 +33,9 @@ const focused = document.getElementById("focused");
 const card = document.getElementById("card");
 const cardBody = document.getElementById("card-body");
 const focusControls = document.getElementById("focus-controls");
+const bookPicker = document.getElementById("book-picker");
 const bookSelect = document.getElementById("book-select");
+const bookMenu = document.getElementById("book-menu");
 
 let DATA = null;   // the book as loaded
 let verses = [];   // {line, text, start, speechEnd, end, el}, timed ones in recording order
@@ -748,7 +750,8 @@ async function openCard(w) {
 // it when there is more room there), centred on the word and kept between the top bar
 // and the player. Wide screens keep it in the right-hand margin (CSS).
 const cardFloats = window.matchMedia?.("(max-width: 75.99rem)");
-const CARD_GAP = 8;  // px between the card and the line, and from the bars and edges
+const CARD_GAP = 8;    // px between the card and the bars and edges
+const CARD_SPACE = 20; // px between the card and the word's line
 function placeCard() {
   if (card.hidden || !selected) return;
   Object.assign(card.style, { left: "", top: "", maxHeight: "" });
@@ -757,10 +760,19 @@ function placeCard() {
   if (!r.width && !r.height) return closeCard();  // its verse is hidden (focused mode)
   const minTop = document.getElementById("topbar").getBoundingClientRect().bottom + CARD_GAP;
   const maxBottom = document.getElementById("player").getBoundingClientRect().top - CARD_GAP;
-  const above = r.top - CARD_GAP - minTop, below = maxBottom - r.bottom - CARD_GAP;
-  const fitsAbove = above >= card.offsetHeight || above >= below;
+  // Above the whole verse, so a wrapped verse isn't half covered; failing that below it;
+  // failing both (a verse at the top of the page, a long prose paragraph) beside the word's line.
+  const v = selected.closest(".text")?.getBoundingClientRect() ?? r;
+  const need = Math.min(card.offsetHeight, 160);
+  const room = (top, bottom) => ({ above: top - CARD_SPACE - minTop, below: maxBottom - bottom - CARD_SPACE });
+  let { above, below } = room(v.top, v.bottom), from = v;
+  if (above < need && below < need) {
+    ({ above, below } = room(r.top, r.bottom));
+    from = r;
+  }
+  const fitsAbove = above >= need || above >= below;
   card.style.maxHeight = `${Math.max(fitsAbove ? above : below, 120)}px`;
-  card.style.top = `${fitsAbove ? r.top - CARD_GAP - card.offsetHeight : r.bottom + CARD_GAP}px`;
+  card.style.top = `${fitsAbove ? from.top - CARD_SPACE - card.offsetHeight : from.bottom + CARD_SPACE}px`;
   const w = card.offsetWidth;
   card.style.left = `${Math.min(Math.max(CARD_GAP, r.left + r.width / 2 - w / 2), innerWidth - w - CARD_GAP)}px`;
 }
@@ -796,11 +808,14 @@ document.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected) closeCard(); });
 
 // Track which verse's text the pointer is on; leaving a held verse resumes playback.
-list.addEventListener("mouseover", (e) => {
+// A mouse only: a tap on a touch screen would leave its verse "hovered" until the next tap.
+list.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse") return;
   const text = e.target.closest(".text");
   if (text) hovered = entryOf.get(text.closest(".verse")) ?? null;
 });
-list.addEventListener("mouseout", (e) => {
+list.addEventListener("pointerout", (e) => {
+  if (e.pointerType !== "mouse") return;
   const text = e.target.closest(".text");
   if (!text || text.contains(e.relatedTarget)) return;
   hovered = null;
@@ -810,7 +825,7 @@ list.addEventListener("mouseout", (e) => {
   }
 });
 
-try { holdOnHover.checked = localStorage.getItem("holdOnHover") === "1"; } catch {}
+try { holdOnHover.checked = localStorage.getItem("holdOnHover") !== "0"; } catch {}  // on by default
 holdOnHover.addEventListener("change", () => {
   try { localStorage.setItem("holdOnHover", holdOnHover.checked ? "1" : "0"); } catch {}
   if (!holdOnHover.checked) { clearHold(); update(); }
@@ -831,6 +846,55 @@ applyFocused();
 for (const ev of ["wheel", "touchmove"]) {
   window.addEventListener(ev, () => { lastUserScroll = Date.now(); }, { passive: true });
 }
+
+// Focused mode: scrolling (wheel or swipe) steps through the verses. If the page is
+// taller than the window (a long verse on a phone), it scrolls as usual until the edge.
+const WHEEL_STEP = 60;      // px of wheel travel per verse
+const WHEEL_LOCK_MS = 450;  // after a step, one gesture (or trackpad momentum) won't step again...
+const WHEEL_QUIET_MS = 150; // ...until the wheel has been still this long
+let wheelSum = 0, wheelStepAt = 0, wheelLastAt = 0;
+
+function stepsVerses(e, dir) {
+  if (!focused.checked || !verses.length || document.body.classList.contains("no-audio")) return false;
+  if (e.target.closest?.("#scholia, #card, #player, #topbar")) return false;
+  const root = document.scrollingElement ?? document.documentElement;
+  return dir > 0 ? scrollY + innerHeight >= root.scrollHeight - 2 : scrollY <= 2;
+}
+function stepBy(dir) { seekTo(Math.min(Math.max(focusIdx + dir, 0), verses.length - 1)); }
+
+window.addEventListener("wheel", (e) => {
+  if (!e.deltaY || Math.abs(e.deltaX) > Math.abs(e.deltaY) || !stepsVerses(e, Math.sign(e.deltaY))) return;
+  e.preventDefault();
+  const now = Date.now();
+  const quiet = now - wheelLastAt > WHEEL_QUIET_MS;
+  wheelLastAt = now;
+  if (quiet) wheelSum = 0;
+  else if (now - wheelStepAt < WHEEL_LOCK_MS) return;
+  else if (Math.abs(e.deltaY) < 4) return;  // the dying tail of trackpad momentum
+  wheelSum += e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? innerHeight : 1);
+  if (Math.abs(wheelSum) >= WHEEL_STEP) {
+    stepBy(Math.sign(wheelSum));
+    wheelSum = 0;
+    wheelStepAt = now;
+  }
+}, { passive: false });
+
+let touchFrom = null;  // {x, y} where a one-finger swipe began
+window.addEventListener("touchstart", (e) => {
+  touchFrom = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+}, { passive: true });
+window.addEventListener("touchmove", (e) => {
+  if (!touchFrom || e.touches.length !== 1) return;
+  const dy = touchFrom.y - e.touches[0].clientY;
+  if (dy && stepsVerses(e, Math.sign(dy))) e.preventDefault();  // no native scroll or bounce
+}, { passive: false });
+window.addEventListener("touchend", (e) => {
+  if (!touchFrom) return;
+  const t = e.changedTouches[0];
+  const dx = touchFrom.x - t.clientX, dy = touchFrom.y - t.clientY;
+  touchFrom = null;
+  if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx) && stepsVerses(e, Math.sign(dy))) stepBy(Math.sign(dy));
+});
 
 // Stepping keeps the play state: a paused reader stays paused on the new verse.
 function stepBack() {
@@ -947,22 +1011,61 @@ themeButton.addEventListener("click", () => {
 });
 showTheme();
 
-// Book picker (hidden for a work in one piece).
+// Book picker (hidden for a work in one piece): a menu of links to the other books.
 function fillBooks(books) {
-  bookSelect.replaceChildren(...books.map((b) => new Option(b.label, String(b.n))));
-  bookSelect.hidden = books.length < 2;
-  bookSelect.value = String(BOOK);
+  bookMenu.replaceChildren(...books.map((b) => {
+    const q = new URLSearchParams(TEXT === "iliad" ? {} : { text: TEXT });
+    q.set("book", b.n);
+    const li = document.createElement("li");
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", String(b.n === BOOK));
+    const a = document.createElement("a");
+    a.href = `?${q}`;
+    a.textContent = b.label;
+    li.append(a);
+    return li;
+  }));
+  document.getElementById("book-label").textContent = books.find((b) => b.n === BOOK)?.label ?? "";
+  bookPicker.hidden = books.length < 2;
 }
-bookSelect.addEventListener("change", () => {
-  savePlace();
-  const q = new URLSearchParams(TEXT === "iliad" ? {} : { text: TEXT });
-  q.set("book", bookSelect.value);
-  location.search = `?${q}`;
+function openBooks() {
+  bookMenu.hidden = false;
+  bookSelect.setAttribute("aria-expanded", "true");
+  // Keep it on screen: shift it left if it would run off the right edge.
+  bookMenu.style.left = "";
+  const over = bookMenu.getBoundingClientRect().right - (innerWidth - 16);
+  if (over > 0) bookMenu.style.left = `${-over}px`;
+  const here = bookMenu.querySelector('[aria-selected="true"]');
+  if (here) bookMenu.scrollTop = here.offsetTop - (bookMenu.clientHeight - here.offsetHeight) / 2;
+  (here ?? bookMenu.firstElementChild)?.querySelector("a").focus({ preventScroll: true });
+}
+function closeBooks() {
+  if (bookMenu.hidden) return;
+  bookMenu.hidden = true;
+  bookSelect.setAttribute("aria-expanded", "false");
+}
+bookSelect.addEventListener("click", () => (bookMenu.hidden ? openBooks() : closeBooks()));
+bookMenu.addEventListener("click", (e) => { if (e.target.closest("a")) savePlace(); });
+// Tapping anywhere else closes it.
+document.addEventListener("pointerdown", (e) => { if (!bookPicker.contains(e.target)) closeBooks(); });
+bookPicker.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !bookMenu.hidden) { e.preventDefault(); closeBooks(); bookSelect.focus(); }
+  else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && !bookMenu.hidden) {
+    e.preventDefault();
+    const links = [...bookMenu.querySelectorAll("a")];
+    const i = links.indexOf(document.activeElement) + (e.key === "ArrowDown" ? 1 : -1);
+    links[Math.min(Math.max(i, 0), links.length - 1)]?.focus();
+  }
+});
+// Tabbing out closes it too. (A click elsewhere is left to pointerdown: Safari doesn't
+// focus a clicked button, so a click on the picker's own button would look like leaving.)
+bookPicker.addEventListener("focusout", (e) => {
+  if (e.relatedTarget && !bookPicker.contains(e.relatedTarget)) closeBooks();
 });
 
 document.addEventListener("keydown", (e) => {
   // Typing in the line box is left alone; on a slider the arrow keys move the slider.
-  if (e.target.closest?.('input[type="text"], textarea, select')) return;
+  if (e.target.closest?.('input[type="text"], textarea, select, #book-picker')) return;
   if (e.target.type === "range" && e.key.startsWith("Arrow")) return;
   if (e.key === " ") { e.preventDefault(); togglePlay(); }
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }
