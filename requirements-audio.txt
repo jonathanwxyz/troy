@@ -9,3 +9,6 @@
 numpy
 transformers
 uroman
+# scripts/make_emissions.py --links (YouTube downloads); yt-dlp also wants a JavaScript
+# runtime such as deno installed for YouTube
+yt-dlp

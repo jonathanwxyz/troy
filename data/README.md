@@ -27,8 +27,10 @@ Run in this order; each script replaces only its own tables. Pages are cached in
    all 24 books (~4–5 h on CPU). `scripts/check_timings.py` checks the result against
    the pauses in each recording. The slow part (the model's output, cached in
    `recordings/cache/`) depends only on the audio and uses a GPU when there is one: to
-   make it on another machine, run `align_audio.py --audio … --emissions-only` there (no
-   database needed) and copy the `.npy` files back.
+   make it on another machine, run `scripts/make_emissions.py recordings/` there (any
+   number of recordings or folders; no database or text needed) and copy the `.npy`
+   files back. Then `align_audio.py --book N --emissions <file>.mms.npy` aligns in
+   seconds, without the audio.
 
 The recordings (Project Eustathios, modern pronunciation, Homer only) stay local, see
 `.gitignore`. Fetch them as AAC with

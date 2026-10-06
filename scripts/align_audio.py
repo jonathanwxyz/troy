@@ -17,7 +17,11 @@ so it can be made on a faster machine and copied over:
     .venv/bin/python scripts/align_audio.py --audio recordings/iliad01.m4a --emissions-only
 
 needs neither the database nor --book. Copy recordings/cache/<file>.<model>.npy back
-and run the full command here: it finds the cache and aligns in seconds.
+and run the full command here: it finds the cache and aligns in seconds. For many
+recordings at once, use make_emissions.py. The audio itself isn't needed here once
+its emissions exist:
+
+    .venv/bin/python scripts/align_audio.py --book 1 --emissions cache/iliad01.m4a.mms.npy
 
 The model runs on a GPU when there is one (--device auto: CUDA, then Apple's MPS, else
 CPU); a GPU is many times faster than a laptop CPU. It needs a GPU build of PyTorch,
@@ -181,7 +185,9 @@ def align(lp, segments, blank):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--book", type=int)
-    ap.add_argument("--audio", type=Path, required=True)
+    ap.add_argument("--audio", type=Path)
+    ap.add_argument("--emissions", type=Path,
+                    help="a saved <recording>.<model>.npy (from make_emissions.py) instead of --audio")
     ap.add_argument("--model", choices=MODELS, default="mms")
     ap.add_argument("--device", choices=["auto", "cpu", "cuda", "mps"], default="auto",
                     help="where the model runs (default: a GPU if there is one)")
@@ -192,10 +198,19 @@ def main():
     args = ap.parse_args()
     if args.book is None and not args.emissions_only:
         ap.error("--book is required (unless --emissions-only)")
+    if (args.audio is None) == (args.emissions is None):
+        ap.error("give either --audio or --emissions")
+    if args.emissions:
+        suffix = f".{args.model}.npy"
+        if args.emissions_only or not args.emissions.name.endswith(suffix) or not args.emissions.exists():
+            ap.error(f"--emissions must be an existing <recording>{suffix} file (and not with --emissions-only)")
+        recording = args.emissions.name[:-len(suffix)]
+    else:
+        recording = args.audio.name
 
     name = MODELS[args.model]
     processor = AutoProcessor.from_pretrained(name)
-    cache = args.audio.parent / "cache" / f"{args.audio.name}.{args.model}.npy"  # e.g. iliad01.m4a.mms.npy
+    cache = args.emissions or args.audio.parent / "cache" / f"{recording}.{args.model}.npy"  # e.g. iliad01.m4a.mms.npy
     t0 = time.time()
     if cache.exists():
         lp = np.load(cache)
@@ -234,7 +249,7 @@ def main():
     spans = align(lp, tokens, blank)
     print(f"alignment: {len(segments)} segments in {time.time() - t1:.1f} s")
 
-    rows = [(args.audio.name, args.model, args.book, line, a * FRAME_S, e * FRAME_S, b * FRAME_S, score)
+    rows = [(recording, args.model, args.book, line, a * FRAME_S, e * FRAME_S, b * FRAME_S, score)
             for (line, _), (a, e, b, score) in zip(segments, spans)]
     con.executescript(
         """
@@ -252,7 +267,7 @@ def main():
         """
     )
     con.execute("DELETE FROM verse_timings WHERE recording = ? AND model = ? AND book = ?",
-                (args.audio.name, args.model, args.book))
+                (recording, args.model, args.book))
     con.executemany("INSERT INTO verse_timings VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows)
     con.commit()
     print(f"{len(rows)} verse timings -> {DB.relative_to(ROOT)} (verse_timings, model={args.model})")
