@@ -23,8 +23,8 @@
       if (v > 0) document.documentElement.style.setProperty(prop, v);
     }
   } catch {}
-  // And the font for the Greek (EB Garamond unless another was chosen).
-  try { const f = localStorage.getItem("font"); if (f === "gentium" || f === "didot") document.documentElement.dataset.font = f; } catch {}
+  // And the font for the Greek (Gentium unless another was chosen).
+  try { const f = localStorage.getItem("font"); if (f === "garamond" || f === "didot") document.documentElement.dataset.font = f; } catch {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,8 +51,8 @@
       <div class="font-row" role="group" aria-label="Font">
         <span class="size-name">Font</span>
         <span class="font-choices">
-          <button class="font-choice" data-font="garamond" aria-pressed="false">Garamond</button>
           <button class="font-choice" data-font="gentium" aria-pressed="false">Gentium</button>
+          <button class="font-choice" data-font="garamond" aria-pressed="false">Garamond</button>
           <button class="font-choice" data-font="didot" aria-pressed="false">Didot</button>
         </span>
       </div>
@@ -67,9 +67,11 @@
 <main>
   <h1>Βιβλιοθήκη</h1>
   <p class="sub">Library</p>
+  <section id="bookmarks" class="category" hidden></section>
   <div id="library" aria-live="polite"></div>
 </main>
 <script src="theme.js"></script>
+<script src="shared.js"></script>
 <script src="home.js"></script>
 </body>
 </html>

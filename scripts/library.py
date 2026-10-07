@@ -16,6 +16,9 @@ the repository shows the format. It is JSON:
         "label": "Ῥαψῳδία {N}",                     -- optional: name the books ({n}: number,
                                                     -- {N}: Greek numeral letter, Α–Ω)
         "source": {"type": "wikisource", "site": "el.wikisource.org", "index": "<index page>"}},
+       {..., "collection": "Καινὴ Διαθήκη"},       -- optional: texts sharing a collection (the
+                                                    -- books of a Testament) are listed together,
+                                                    -- the collection's books, then their chapters
        {"slug": "apology", "title": "Ἀπολογία Σωκράτους", "author": "Πλάτων",
         "category": "Philosophy", "source": {"type": "perseus", "work": "tlg0059.tlg002"}}]}
 
@@ -41,7 +44,7 @@ plus where to find them, and "notes_credit" (a line under the panel):
               continuing the line before; the books' hypotheses go with line 1
 
 Tables: categories (name, sort), texts (slug, title, author, category, sort, form:
-verse|prose, cite: line|section, reader: text|iliad, credit), divisions (text, n, label:
+verse|prose, cite: line|section, reader: text|iliad, credit, notes_credit, collection), divisions (text, n, label:
 a book, or the whole work), segments (text, div, seq, ref: line number or section,
 content, speaker, para: 1 where a paragraph or speech begins), note_sources (text, id,
 siglum, name, lang, sort), notes (text, div, pos_from, pos_to: the segments (seq) a note
@@ -367,7 +370,7 @@ def main():
             rows_ns += ns
             rows_n += n
         rows_t.append((t["slug"], t["title"], t.get("author"), t["category"], sort, form, cite, reader,
-                       t.get("credit"), t.get("notes_credit")))
+                       t.get("credit"), t.get("notes_credit"), t.get("collection")))
         rows_d += [(t["slug"], n, label) for n, label in divs]
         rows_s += [(t["slug"], *s) for s in segs]
 
@@ -388,7 +391,8 @@ def main():
             cite     TEXT NOT NULL,      -- line or section (Stephanus)
             reader   TEXT NOT NULL,      -- text (generic reader) or iliad
             credit   TEXT,
-            notes_credit TEXT);          -- under the σχόλια panel
+            notes_credit TEXT,           -- under the σχόλια panel
+            collection TEXT);            -- listed with the other texts of this name (a Testament)
         CREATE TABLE divisions (
             text  TEXT NOT NULL REFERENCES texts,
             n     INTEGER NOT NULL,      -- book number (1 for an undivided work)
@@ -418,7 +422,7 @@ def main():
         CREATE INDEX notes_place ON notes (text, div, pos_from);
     """)
     con.executemany("INSERT INTO categories VALUES (?, ?)", [(c, i) for i, c in enumerate(categories)])
-    con.executemany("INSERT INTO texts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows_t)
+    con.executemany("INSERT INTO texts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows_t)
     con.executemany("INSERT INTO note_sources VALUES (?, ?, ?, ?, ?, ?)", rows_ns)
     con.executemany("INSERT INTO notes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", rows_n)
     con.executemany("INSERT INTO divisions VALUES (?, ?, ?)", rows_d)

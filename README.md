@@ -5,7 +5,7 @@ is highlighted as it plays. It began with Homer's *Iliad*, where each line comes
 help for reading it:
 
 - **Gaza's paraphrase**: Theodorus Gaza's Byzantine prose paraphrase under each line;
-  hovering a Homeric word shows its equivalent in the paraphrase (Books 1–6 so far).
+  hovering a Homeric word shows its equivalent in the paraphrase (Books 1–18 so far).
 - **Word cards**: click a word for its lemma, a short definition, its morphology and its
   role in the sentence (from the Perseus treebank).
 - **Translations**: A. T. Murray's English (line by line in Book 1, in short passages
@@ -17,7 +17,7 @@ help for reading it:
   verse under the pointer, and the place in each book is remembered.
 
 Keys: Space plays or pauses, ← ↑ and → ↓ step a verse, F toggles focused mode, S shows
-the scholia.
+the scholia, B bookmarks the verse.
 
 Other texts live in a **library**, the start page: texts grouped by category, read a
 book at a time with the same reader, which shows whatever each text has (prose is set
@@ -26,6 +26,18 @@ in paragraphs, and the position box jumps to a line, or to a Stephanus section s
 `library/catalogue.json` (git-ignored; `library/catalogue.example.json` shows the
 format, and `scripts/library.py` documents the sources it can fetch: Wikisource poems
 and Perseus prose) and build it with `python3 scripts/library.py`.
+
+A work in several books opens from the library at the book last read, with a menu of the
+others; texts given the same `collection` in the catalogue (the books of a Testament) are
+listed together, with a menu of their books and, under each, its chapters.
+
+**Bookmarks**: the bookmark button in the reader's top bar (or B) marks the verse being
+read; the library lists the bookmarks, and deletes them. They are kept by the server in
+`data/bookmarks.json` (git-ignored), so every device using it shares them.
+
+**Links to a verse**: `&v=` opens a book at a verse, or shows a range of verses alone:
+`read.html?text=iliad&book=1&v=40`, `&v=40-60`, or for Plato a Stephanus section,
+`&v=17a` or `&v=17a-18c` (`17` is the whole of section 17).
 
 ## Running it
 
