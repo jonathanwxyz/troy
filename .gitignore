@@ -18,3 +18,7 @@ recordings/
 # shows the format
 library/*
 !library/catalogue.example.json
+
+# Bookmarks (scripts/serve.py), kept local
+data/bookmarks.json
+data/bookmarks.tmp

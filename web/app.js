@@ -3,9 +3,14 @@
 // its own API, with Gaza's paraphrase, translations, scholia and parsing. Library texts
 // have only what their data offers (data.features); prose (Plato) is set as paragraphs
 // with its sections (Stephanus) marked.
+//
+// &v= opens the book at a verse, a line ("40", or "1.40") or a section ("17a"; "17" is its
+// first), or shows a range of them alone ("40-60", "17a-18c": "18" ends after all of 18).
 const PARAMS = new URLSearchParams(location.search);
 const TEXT = PARAMS.get("text") || "iliad";
 const BOOK = Number(PARAMS.get("book") || 1);
+const [V_FROM, V_TO] = (PARAMS.get("v") ?? "").split(/[-–]/).map((s) => s.trim());
+let RANGE = null;  // {from, to}: the refs of the first and last verse shown, when showing a range
 // Old links (?book=N, the Iliad) show the full address: ?text=iliad&book=N.
 if (!PARAMS.has("text")) history.replaceState(null, "", `?${new URLSearchParams({ text: TEXT, book: BOOK })}${location.hash}`);
 const API = TEXT === "iliad" ? `/api/book/${BOOK}` : `/api/text/${encodeURIComponent(TEXT)}/${BOOK}`;
@@ -54,11 +59,16 @@ let released = null;  // verse the reader resumed by hand while hovering: don't 
 
 function render(data) {
   DATA = data;
+  list.replaceChildren();  // the loading skeleton
+  list.classList.remove("loading");
+  if (V_TO) applyRange(data);
+  rememberVisit(TEXT, BOOK, data.collection);
+  try { localStorage.setItem(`meta:${TEXT}`, JSON.stringify({ title: data.title, books: data.books })); } catch {}
   const has = new Set(data.features ?? []);
   for (const f of FEATURES) document.body.classList.toggle(`no-${f}`, !has.has(f));
   if (!has.has("audio")) document.body.classList.remove("focused");  // nothing to focus on
   list.classList.toggle("prose", data.form === "prose");
-  document.getElementById("eyebrow").textContent = data.eyebrow ?? data.title;
+  document.getElementById("eyebrow").textContent = data.title;
   const bookLabel = data.books.find((b) => b.n === data.book)?.label;
   document.title = `${data.title}${bookLabel ? ` · ${bookLabel}` : ""} — Reader`;
   fillBooks(data.books);
@@ -76,6 +86,37 @@ function render(data) {
   const first = refs.find((r) => r.ref && r.ref !== "0")?.ref;
   if (!data.audio) position.placeholder = data.cite === "section" ? `go to ${first}` : "go to line";
   if (data.cite === "section") position.title = `Type a section (e.g. ${first}) and press Enter`;
+}
+
+// A range (?v=40-60): keep only its verses, and say so above them, with a way back to the
+// whole book. A range that doesn't match is ignored.
+function applyRange(data) {
+  const prose = data.cite === "section";
+  let section = null;  // prose: the section each segment falls in
+  const cites = data.verses.map((v) => (v.line > 0 ? (section = v.ref ?? (prose ? section : String(v.line))) : null));
+  const matches = (typed) => {
+    if (prose) {
+      const m = typed.toLowerCase().replace(/[\s.§]+/g, "").match(/^(\d+)([a-e]?)$/);
+      return m && ((c) => c != null && (m[2] ? c === m[1] + m[2] : c.replace(/[a-e]$/, "") === m[1]));
+    }
+    const m = typed.match(/^(?:(\d+)\.)?(\d+)$/);
+    return m && (!m[1] || Number(m[1]) === BOOK) && ((c) => c != null && Number(c) === Number(m[2]));
+  };
+  const isFrom = matches(V_FROM), isTo = matches(V_TO);
+  if (!isFrom || !isTo) return;
+  const from = cites.findIndex(isFrom);
+  let to = cites.findLastIndex(isTo);
+  if (to < 0 && !prose && Number(V_TO.split(".").at(-1)) > Number(cites.at(-1))) to = cites.length - 1;  // past the end
+  if (from < 0 || to < from) return;
+  const first = cites[from], last = cites[to];
+  data.verses = data.verses.slice(from, to + 1);
+  data.translation = (data.translation ?? []).filter((p) => p.to >= Number(first) && p.from <= Number(last));
+  RANGE = { from: first, to: last };
+  const note = el("p", "range-note", `${prose ? "Sections" : "Lines"} ${first === last ? first : `${first}–${last}`} · `);
+  const whole = el("a", null, "whole book");
+  whole.href = readerHref(TEXT, BOOK);
+  note.append(whole);
+  document.getElementById("credits").before(note);
 }
 
 function renderVerse(data, has) {
@@ -112,6 +153,7 @@ function renderVerse(data, has) {
       li.append(icon);
     }
     li.append(num, text);
+    if (v.line > 0) li.dataset.ref = ref;
     setNoteKey(li, v.line, v.line, v.line === 0 ? "" : data.books.length > 1 ? `${BOOK}.${ref}` : ref);
     if (v.scholia) li.append(scholiaButton(li, `line ${ref}`, v.scholia));
     if (v.paraphrase) {
@@ -221,6 +263,9 @@ function scholiaButton(li, what, count) {
   b.title = `Notes on ${what} (${count})`;
   b.setAttribute("aria-label", b.title);
   b.addEventListener("click", (e) => { e.stopPropagation(); openScholiaPopup(noteKey(li)); });
+  // Start fetching as the finger or button goes down: often there by the click.
+  b.addEventListener("pointerdown", () => prefetchScholia(li));
+  li.dataset.scholia = count;
   return b;
 }
 
@@ -314,6 +359,7 @@ function update() {
   if (i !== current) {
     if (current >= 0) verses[current].el.classList.remove("current", "pausing");
     current = i;
+    if (DATA) queueMarkButton();
     if (i >= 0) {
       const el = verses[i].el;
       el.classList.add("current");
@@ -330,6 +376,8 @@ function update() {
     p?.el.classList.add("active");
   }
   if (i >= 0) holdIfHovered(verses[i], t);
+  // A range plays to the end of its last verse and stops there.
+  if (RANGE && !audio.paused && verses.length && t >= verses.at(-1).end) audio.pause();
   skipSilence(i, t);
   document.body.classList.toggle("playing", isPlaying());
   showTimeline(audio.currentTime);
@@ -365,6 +413,7 @@ function isPlaying() {
 
 function togglePlay() {
   if (heldBy) { clearHold(); update(); }  // stay stopped; moving off the word won't resume
+  else if (audio.paused && RANGE && verses.length && audio.currentTime >= verses.at(-1).end - 0.05) seekTo(0, { play: true });
   else if (audio.paused) audio.play();
   else audio.pause();
 }
@@ -489,6 +538,7 @@ const scholiaPanel = document.getElementById("scholia");
 const scholiaBody = document.getElementById("scholia-body");
 const scholiaLine = document.getElementById("scholia-line");
 const scholiaCache = new Map();  // "from-to" -> response promise
+const scholiaLoaded = new Map(); // "from-to" -> response, once it has arrived
 let scholiaShown = null;         // "from-to" of the line(s) the panel shows
 let scholiaFolded = new Set();
 try { scholiaFolded = new Set(JSON.parse(localStorage.getItem("scholiaFolded")) ?? []); } catch {}
@@ -500,6 +550,7 @@ function fetchScholia(key) {
       : `/api/notes/${encodeURIComponent(TEXT)}/${BOOK}/${id}`;
     scholiaCache.set(id, fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => { scholiaLoaded.set(id, data); return data; })
       .catch((err) => { scholiaCache.delete(id); throw err; }));
   }
   return scholiaCache.get(id);
@@ -555,6 +606,13 @@ function loadScholia(key) {
     scholiaBody.replaceChildren(el("p", "note", "The scholia begin at line 1."));
     return;
   }
+  // Already here: shown at once. Otherwise grey lines until it comes, never the notes of
+  // the verse before.
+  if (scholiaLoaded.has(id)) return renderScholia(scholiaLoaded.get(id));
+  const skel = el("div", "sch-skel");
+  for (let i = 0; i < 4; i++) skel.append(el("span"));
+  scholiaBody.replaceChildren(skel);
+  scholiaBody.scrollTop = 0;
   fetchScholia(key)
     .then((data) => { if (scholiaShown === id) renderScholia(data); })
     .catch((err) => {
@@ -567,6 +625,19 @@ function loadScholia(key) {
 function showScholiaFor(key) {
   if (!hasScholia || !showScholia.checked || popupMode() || !key || `${key.from}-${key.to}` === scholiaShown) return;
   loadScholia(key);
+  // Fetch the next verses' notes too, so the panel keeps up with the recitation.
+  if (key.li) {
+    let next = key.li;
+    for (let n = 0; n < 2 && (next = next.nextElementSibling); ) {
+      if (!next.classList.contains("verse")) continue;
+      n++;
+      if (next.dataset.scholia) prefetchScholia(next);
+    }
+  }
+}
+function prefetchScholia(li) {
+  const key = noteKey(li);
+  if (key && key.from) fetchScholia(key).catch(() => {});
 }
 
 function readingRow() {
@@ -1014,11 +1085,13 @@ function fillBooks(books) {
     li.setAttribute("aria-selected", String(b.n === BOOK));
     const a = document.createElement("a");
     a.href = `?${q}`;
-    a.textContent = b.label;
+    a.textContent = shortLabel(b.label, b.n);
+    if (b.label) a.title = b.label;
     li.append(a);
     return li;
   }));
-  document.getElementById("book-label").textContent = books.find((b) => b.n === BOOK)?.label ?? "";
+  const here = books.find((b) => b.n === BOOK);
+  document.getElementById("book-label").textContent = here ? shortLabel(here.label, here.n) : "";
   bookPicker.hidden = books.length < 2;
 }
 function openBooks() {
@@ -1091,6 +1164,7 @@ function savePlace() {
 }
 
 function restorePlace() {
+  if (V_FROM) return goToLinked();
   let saved = null;
   try { saved = localStorage.getItem(PLACE_KEY); } catch {}
   if (!DATA.audio) {
@@ -1100,15 +1174,50 @@ function restorePlace() {
     return;
   }
   const t = parseFloat(saved);
+  // Show the place at once; the recording is moved there once it can be.
+  const at = t > 0 ? verseAt(t) : -1;
+  if (at >= 0 && !focused.checked) verses[at].el.scrollIntoView({ block: "center" });
   const apply = () => {
     if (t > 0 && (!audio.duration || t < audio.duration)) audio.currentTime = t;
     restored = true;
     update();
     if (current >= 0 && !focused.checked) verses[current].el.scrollIntoView({ block: "center" });
   };
-  // Setting currentTime before the audio's metadata is known may be ignored.
-  if (audio.readyState >= 1) apply();
-  else audio.addEventListener("loadedmetadata", apply, { once: true });
+  whenAudioReady(apply);
+}
+
+// Setting currentTime before the audio's metadata is known may be ignored.
+function whenAudioReady(fn) {
+  if (audio.readyState >= 1) fn();
+  else audio.addEventListener("loadedmetadata", fn, { once: true });
+}
+
+// Opened at a verse (?v=40): go there, paused, and mark it. Then the address loses the
+// verse, so a reload comes back to wherever reading got to. A range (?v=40-60) starts
+// at its beginning and keeps its address; its place isn't saved over the book's.
+function goToLinked() {
+  const target = RANGE ? refs[0] : V_TO ? null : DATA.cite === "section" ? findSection(V_FROM) : findLine(V_FROM);
+  if (!target) {
+    if (!RANGE) history.replaceState(null, "", readerHref(TEXT, BOOK));
+    restored = !RANGE;
+    return;
+  }
+  if (!focused.checked || !target.entry) target.el.scrollIntoView({ block: "center" });
+  noteTap(target.el.closest("li.verse") ?? target.el, target.el.getBoundingClientRect().top);
+  if (!RANGE) {
+    target.el.classList.add("located");
+    setTimeout(() => target.el.classList.remove("located"), 1800);
+    history.replaceState(null, "", readerHref(TEXT, BOOK));
+  }
+  if (target.entry) {
+    whenAudioReady(() => {
+      audio.currentTime = target.entry.start;
+      restored = !RANGE;
+      update();
+    });
+  } else {
+    restored = !RANGE;
+  }
 }
 
 audio.addEventListener("timeupdate", () => { if (Date.now() - lastSaved > 3000) savePlace(); });
@@ -1139,13 +1248,165 @@ function setupMediaSession() {
   }
 }
 
+// Bookmarks: the button in the top bar marks the verse being read, or unmarks it if it is
+// marked already: the verse playing if it is on screen, else the one last tapped, else
+// the one at the reading position (in prose, the section where it was tapped or where the
+// reading position is). A verse opened by a link counts as tapped. Marked verses carry a
+// ribbon; the library lists them.
+const bookmarkButton = document.getElementById("bookmark");
+const toastBox = document.getElementById("toast");
+let marks = new Map();  // ref -> bookmark, in this book
+let tappedRow = null, tappedAt = 0, tappedY = 0;  // tappedY: in the page (not the viewport)
+
+function noteTap(li, y) {
+  tappedRow = li;
+  tappedAt = Date.now();
+  tappedY = y + scrollY;
+}
+list.addEventListener("pointerdown", (e) => {
+  const li = e.target.closest("li.verse");
+  if (li) noteTap(li, e.clientY);
+});
+
+function onScreen(row) {
+  const r = row.getBoundingClientRect();
+  const top = document.getElementById("topbar").getBoundingClientRect().bottom;
+  const bottom = document.getElementById("player").getBoundingClientRect().top;
+  return r.height > 0 && r.bottom > top && r.top < bottom;
+}
+
+// The verse (row) to mark, and its reference: a line, or for prose the section at the
+// reading position within the paragraph.
+function markTarget() {
+  const cur = current >= 0 ? verses[current] : null;
+  const tapped = tappedRow && Date.now() - tappedAt < 60000 && onScreen(tappedRow);
+  let li = cur && cur.line > 0 && onScreen(cur.el) ? cur.el : tapped ? tappedRow : readingRow();
+  const probe = li === tappedRow ? tappedY - scrollY : innerHeight * 0.4;
+  if (li && !li.dataset.ref && !li.classList.contains("prose-para")) li = li.nextElementSibling?.closest("li.verse");
+  if (!li) return null;
+  if (!li.classList.contains("prose-para")) return li.dataset.ref ? { li, ref: li.dataset.ref } : null;
+  const inside = refs.filter((r) => li.contains(r.el));
+  let pick = inside[0];
+  for (const r of inside) if (r.el.getBoundingClientRect().top <= probe + 1) pick = r;
+  const ref = pick?.ref ?? li.dataset.label?.split("–")[0];
+  return ref ? { li, ref, seg: pick && pick.el !== li.querySelector(".text") ? pick.el : null } : null;
+}
+
+// "Α 40" in a work in books lettered Α–Ω, "5.12" in other books, "17a" in a single work.
+function placeLabel(ref) {
+  const b = DATA.books.find((x) => x.n === BOOK);
+  if (DATA.books.length < 2 || !b) return ref;
+  const m = b.label?.match(/\s(\p{Script=Greek}{1,2})$/u);
+  return m ? `${m[1]} ${ref}` : `${BOOK}.${ref}`;
+}
+
+function rowOfRef(ref) {
+  return refs.find((r) => r.ref === ref)?.el.closest("li.verse") ?? null;
+}
+
+function showMarks() {
+  for (const li of list.querySelectorAll("li.bookmarked")) li.classList.remove("bookmarked");
+  for (const ref of marks.keys()) rowOfRef(ref)?.classList.add("bookmarked");
+  showMarkButton();
+}
+function showMarkButton() {
+  const t = DATA && markTarget();
+  const on = !!(t && marks.has(t.ref));
+  bookmarkButton.setAttribute("aria-pressed", String(on));
+  bookmarkButton.title = on ? "Remove the bookmark on this verse" : "Bookmark this verse";
+}
+
+let toastTimer = 0;
+function toast(text) {
+  toastBox.textContent = text;
+  toastBox.hidden = false;
+  toastBox.classList.remove("out");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastBox.classList.add("out");
+    toastTimer = setTimeout(() => { toastBox.hidden = true; }, 250);
+  }, 1800);
+}
+
+async function toggleBookmark() {
+  if (!DATA) return;
+  const t = markTarget();
+  if (!t) return toast("Scroll to a verse to bookmark it");
+  const label = `${DATA.title} ${placeLabel(t.ref)}`;
+  const have = marks.get(t.ref);
+  try {
+    if (have) {
+      await bookmarksApi.remove(have.id);
+      marks.delete(t.ref);
+      toast(`Bookmark removed · ${label}`);
+    } else {
+      const copy = (t.seg ?? t.li.querySelector(".text")).cloneNode(true);
+      for (const m of copy.querySelectorAll(".ref-mark")) m.remove();  // the section numbers
+      const words = copy.textContent.replace(/\s+/g, " ").trim();
+      const mark = await bookmarksApi.add({
+        text: TEXT, book: BOOK, ref: t.ref, title: DATA.title, label,
+        snippet: words.length > 90 ? `${words.slice(0, 88).trimEnd()}…` : words,
+      });
+      marks.set(t.ref, mark);
+      toast(`Bookmarked · ${label}`);
+    }
+  } catch {
+    return toast(navigator.onLine === false ? "Bookmarks need the connection" : "Couldn't save the bookmark");
+  }
+  showMarks();
+  t.li.classList.remove("located");
+  void t.li.offsetWidth;
+  t.li.classList.add("located");
+  setTimeout(() => t.li.classList.remove("located"), 1800);
+}
+
+function loadMarks() {
+  bookmarksApi.list()
+    .then((all) => {
+      marks = new Map(all.filter((b) => b.text === TEXT && b.book === BOOK).map((b) => [b.ref, b]));
+      showMarks();
+    })
+    .catch(() => {});
+}
+bookmarkButton.addEventListener("click", toggleBookmark);
+bookmarkButton.addEventListener("mousedown", (e) => e.preventDefault());
+let markFrame = 0;
+const queueMarkButton = () => {
+  if (!markFrame) markFrame = requestAnimationFrame(() => { markFrame = 0; showMarkButton(); });
+};
+window.addEventListener("scroll", queueMarkButton, { passive: true });
+list.addEventListener("click", queueMarkButton);
+document.addEventListener("keydown", (e) => {
+  if ((e.key === "b" || e.key === "B") && !e.ctrlKey && !e.metaKey && !e.altKey
+      && !e.target.closest?.('input[type="text"], textarea')) toggleBookmark();
+});
+
 // Installable app: the service worker caches the reader for offline use (sw.js).
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
+// While the book loads: its title and books from the last visit (so the top bar doesn't
+// change when moving between books), and grey lines where the text will be (shown only
+// if loading takes a moment).
+try {
+  const meta = JSON.parse(localStorage.getItem(`meta:${TEXT}`));
+  if (meta?.title) {
+    document.getElementById("eyebrow").textContent = meta.title;
+    fillBooks(meta.books ?? []);
+  }
+} catch {}
+list.classList.add("loading");
+for (let i = 0; i < 14; i++) {
+  const li = el("li", "skel");
+  li.append(el("span", "sk-num"), el("span", "sk-line"), el("span", "sk-line sk-sub"));
+  li.style.setProperty("--w", `${62 + ((i * 37) % 30)}%`);
+  list.append(li);
+}
+
 fetch(API)
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-  .then((data) => { render(data); update(); restorePlace(); setupMediaSession(); })
+  .then((data) => { render(data); update(); restorePlace(); setupMediaSession(); loadMarks(); })
   .catch((err) => {
+    list.classList.remove("loading");
     list.textContent = navigator.onLine === false || err instanceof TypeError
       ? "This isn't available offline yet: open it once while online, and it will be."
       : `Could not load this text: ${err.message}`;

@@ -7,12 +7,14 @@
   --current-bar: #b07a1e;
   --pause-bg: #f7efdb;
   --player-bg: rgba(253, 246, 227, 0.94);
-  --greek: "EB Garamond", "Gentium Book Plus", "Noto Serif", "Times New Roman", serif;
+  --greek: "Gentium Book Plus", "GFS Didot", "Noto Serif", "Times New Roman", serif;
+  --font-scale: 0.91;
   color-scheme: light;  /* native controls (the book list, scrollbars) follow the theme */
 }
-/* The font for the Greek (the Aa menu). Garamond runs small, so the text is set about 10%
-   larger for it; the others take that back with --font-scale. */
-:root[data-font="gentium"] { --greek: "Gentium Book Plus", "GFS Didot", "Noto Serif", "Times New Roman", serif; --font-scale: 0.91; }
+/* The font for the Greek (the Aa menu): Gentium unless another was chosen. Garamond runs
+   small, so the text is set about 10% larger for it; the others take that back with
+   --font-scale. */
+:root[data-font="garamond"] { --greek: "EB Garamond", "Gentium Book Plus", "Noto Serif", "Times New Roman", serif; --font-scale: 1; }
 :root[data-font="didot"] { --greek: "GFS Didot", "Gentium Book Plus", "Noto Serif", "Times New Roman", serif; --font-scale: 0.91; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -45,12 +47,17 @@ html { scroll-padding-top: 4rem; scroll-padding-bottom: 120px; overflow-x: clip;
 body { touch-action: manipulation; -webkit-text-size-adjust: 100%; }
 /* No blue box flashing over whatever is tapped. */
 html { -webkit-tap-highlight-color: transparent; }
+/* Hover styles are only for a real pointer (on touch the last thing tapped would stay
+   lit); a tap gets a brief press instead. */
+@media (hover: none) {
+  button:active:not(:disabled), a:active, summary:active { opacity: 0.55; }
+}
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: var(--greek);
-  font-size: 23px;  /* EB Garamond runs small */
+  font-size: 23px;  /* sized for EB Garamond, which runs small; --font-scale takes the others down */
   line-height: 1.55;
 }
 main {
@@ -101,7 +108,8 @@ main {
 }
 #book-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #book-select svg { flex: none; color: var(--muted); }
-#book-select:hover, #book-select:focus-visible, #book-select[aria-expanded="true"] { border-color: var(--rule); outline: none; }
+#book-select:focus-visible, #book-select[aria-expanded="true"] { border-color: var(--rule); outline: none; }
+@media (hover: hover) { #book-select:hover { border-color: var(--rule); outline: none; } }
 #book-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -131,10 +139,10 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-#book-menu a:hover, #book-menu a:focus-visible { background: var(--current-bg); outline: none; }
+#book-menu a:focus-visible { background: var(--current-bg); outline: none; }
+@media (hover: hover) { #book-menu a:hover { background: var(--current-bg); outline: none; } }
 #book-menu [aria-selected="true"] a { color: var(--current-bar); font-weight: 600; }
 #to-start {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
@@ -146,7 +154,25 @@ main {
   padding: 0.25rem 0.7rem;
   cursor: pointer;
 }
-#to-start:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { #to-start:hover { color: var(--text); border-color: var(--current-bar); } }
+/* Bookmark the verse being read (filled when it is marked). */
+#bookmark {
+  margin-left: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  cursor: pointer;
+}
+@media (hover: hover) { #bookmark:hover { color: var(--text); border-color: var(--current-bar); } }
+#bookmark[aria-pressed="true"] { color: var(--current-bar); border-color: var(--current-bar); }
+#bookmark[aria-pressed="true"] path { fill: currentColor; }
 /* Theme switch: automatic (follows the system) -> light -> dark. */
 #theme {
   display: grid;
@@ -160,7 +186,7 @@ main {
   border-radius: 50%;
   cursor: pointer;
 }
-#theme:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { #theme:hover { color: var(--text); border-color: var(--current-bar); } }
 /* The bars and their controls, at the reader's Interface size. */
 #topbar, #player { zoom: var(--ui-scale, 1); }
 
@@ -176,7 +202,8 @@ main {
   border-radius: 0.95rem;
   cursor: pointer;
 }
-#size-button:hover, #size-button[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
+#size-button[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { #size-button:hover { color: var(--text); border-color: var(--current-bar); } }
 #size-menu {
   position: absolute;
   top: calc(100% + 6px);
@@ -212,7 +239,7 @@ main {
 .font-choice[data-font="garamond"] { font-family: "EB Garamond", serif; }
 .font-choice[data-font="gentium"] { font-family: "Gentium Book Plus", serif; font-size: 15.5px; }
 .font-choice[data-font="didot"] { font-family: "GFS Didot", serif; font-size: 15.5px; }
-.font-choice:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { .font-choice:hover { color: var(--text); border-color: var(--current-bar); } }
 .font-choice[aria-pressed="true"] { color: var(--text); border-color: var(--current-bar); background: var(--current-bg); }
 .size-value { text-align: center; font-variant-numeric: tabular-nums; color: var(--text); }
 .size-step {
@@ -228,7 +255,7 @@ main {
   border-radius: 50%;
   cursor: pointer;
 }
-.size-step:hover:not(:disabled) { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { .size-step:hover:not(:disabled) { color: var(--text); border-color: var(--current-bar); } }
 .size-step:disabled { opacity: 0.35; cursor: default; }
 #theme svg { display: none; }
 #theme[data-mode="auto"] .th-auto, #theme[data-mode="light"] .th-light, #theme[data-mode="dark"] .th-dark { display: block; }
@@ -288,7 +315,7 @@ body:not(.show-translation) .verse .en { display: none; }
   cursor: pointer;
   transition: background-color 120ms ease;
 }
-.verse:hover { background: color-mix(in srgb, var(--current-bg) 35%, transparent); }
+@media (hover: hover) { .verse:hover { background: color-mix(in srgb, var(--current-bg) 35%, transparent); } }
 .verse { position: relative; }
 .verse .seek-icon {
   position: absolute;
@@ -301,7 +328,7 @@ body:not(.show-translation) .verse .en { display: none; }
   pointer-events: none;
   transition: opacity 120ms ease;
 }
-.verse:not(.untimed):hover .seek-icon { opacity: 0.85; }
+@media (hover: hover) { .verse:not(.untimed):hover .seek-icon { opacity: 0.85; } }
 @media (hover: none) { .verse .seek-icon { display: none; } }
 .verse .num {
   text-align: right;
@@ -357,7 +384,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   border: 0; background: transparent; color: var(--muted);
   font-size: 22px; line-height: 1; cursor: pointer; padding: 0.2rem 0.4rem;
 }
-#card-close:hover { color: var(--text); }
+@media (hover: hover) { #card-close:hover { color: var(--text); } }
 #card h2 { margin: 0 1.5rem 0.2rem 0; font-weight: 400; font-size: 1.6em; }
 #card .gloss-line { color: var(--muted); margin: 0 0 0.8rem; }
 #card .token + .token { border-top: 1px solid var(--rule); margin-top: 0.8rem; padding-top: 0.8rem; }
@@ -367,7 +394,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   font-family: system-ui, sans-serif; font-size: 12px; margin-left: 0.5rem;
   color: var(--current-bar); text-decoration: none; vertical-align: middle;
 }
-#card .lemma a:hover { text-decoration: underline; }
+@media (hover: hover) { #card .lemma a:hover { text-decoration: underline; } }
 #card .definition { margin-top: 0.15rem; font-family: system-ui, sans-serif; font-size: 14.5px; }
 #card .morph { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.45rem 0; }
 #card .morph span {
@@ -426,7 +453,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   border: 0; background: transparent; color: var(--muted);
   font-size: 22px; line-height: 1; cursor: pointer; padding: 0 0.3rem;
 }
-#scholia-close:hover { color: var(--text); }
+@media (hover: hover) { #scholia-close:hover { color: var(--text); } }
 #scholia-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0.3rem 1.35rem 0.6rem 1rem; }
 /* Scrolling panels: a thin scrollbar in the theme's colours, with its own gutter (classic
    scrollbars) and room in the padding for overlay ones, so it never covers the counts. */
@@ -452,7 +479,7 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
 .sch-src summary::-webkit-details-marker { display: none; }
 .sch-src summary::before { content: "▸"; font-size: 16px; line-height: 1; transition: transform 120ms ease; }
 .sch-src[open] summary::before { transform: rotate(90deg); }
-.sch-src summary:hover { color: var(--text); }
+@media (hover: hover) { .sch-src summary:hover { color: var(--text); } }
 .siglum {
   font-family: var(--greek);
   font-size: 16.5px;
@@ -516,7 +543,8 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     opacity: 0.55;
     cursor: pointer;
   }
-  .verse.current .sch-btn, .sch-btn:hover { opacity: 1; color: var(--current-bar); }
+  .verse.current .sch-btn { opacity: 1; color: var(--current-bar); }
+  @media (hover: hover) { .sch-btn:hover { opacity: 1; color: var(--current-bar); } }
   /* The page behind the popup doesn't scroll, so only the popup has a scrollbar. */
   html:has(body.scholia-popup) { overflow: hidden; }
   body.scholia-popup::after {
@@ -531,8 +559,9 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
     top: 50%;
     left: 50%;
     width: min(40rem, calc(100vw - 32px));
-    max-height: min(70vh, 36rem);
-    max-height: min(70dvh, 36rem);
+    /* A fixed height: it doesn't change size as one verse's notes give way to another's. */
+    height: min(70vh, 36rem);
+    height: min(70dvh, 36rem);
     transform: translate(-50%, -50%);
     box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
   }
@@ -597,9 +626,9 @@ body.hide-paraphrase .verse { margin-bottom: 0.35rem; }
   color: var(--muted);
   cursor: pointer;
 }
-.tbtn:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { .tbtn:hover { color: var(--text); border-color: var(--current-bar); } }
 .tbtn.play { width: 2.7rem; height: 2.7rem; color: var(--bg); background: var(--current-bar); border-color: var(--current-bar); }
-.tbtn.play:hover { color: var(--bg); filter: brightness(1.08); }
+@media (hover: hover) { .tbtn.play:hover { color: var(--bg); filter: brightness(1.08); } }
 .tbtn.bare { border-color: transparent; background: transparent; }
 .play .icon-pause, body.playing .play .icon-play { display: none; }
 body.playing .play .icon-pause { display: block; }
@@ -670,7 +699,7 @@ body.muted #mute .vol-x { display: inline; }
   border-radius: 6px;
   cursor: text;
 }
-#position:hover { border-color: var(--rule); }
+@media (hover: hover) { #position:hover { border-color: var(--rule); } }
 #position:focus { outline: none; border-color: var(--current-bar); color: var(--text); background: var(--bg); }
 #position.invalid { border-color: #c0392b; }
 .toggle { display: flex; align-items: center; gap: 0.35rem; cursor: pointer; }
@@ -740,7 +769,7 @@ body.focused #focus-controls {
   cursor: pointer;
   padding: 0;
 }
-#focus-controls button:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { #focus-controls button:hover { color: var(--text); border-color: var(--current-bar); } }
 #fc-play { color: var(--current-bar); }
 #fc-play .icon-pause, body.playing #fc-play .icon-play { display: none; }
 body.playing #fc-play .icon-pause { display: block; }
@@ -767,7 +796,7 @@ body.focused .verse.f-cur .seek-icon { display: none; }
   input, select, textarea { font-size: 16px !important; }
   .trans { margin-left: calc(2.2rem + 3px + 0.5rem); }
   .verse { grid-template-columns: 2.2rem 1fr; column-gap: 0.5rem; }
-  .verse:not(.untimed):hover .num { visibility: hidden; }  /* narrow column: the icon takes its place */
+  @media (hover: hover) { .verse:not(.untimed):hover .num { visibility: hidden; } }  /* narrow column: the icon takes its place */
 }
 
 /* Back to the library. */
@@ -778,7 +807,7 @@ body.focused .verse.f-cur .seek-icon { display: none; }
   border-radius: 6px;
   padding: 0.15rem;
 }
-#home:hover { color: var(--text); }
+@media (hover: hover) { #home:hover { color: var(--text); } }
 
 /* Only the controls a text has data for: a library text without a recording keeps the
    position box (for jumping to a line or section). */
@@ -790,7 +819,7 @@ body.no-audio.no-paraphrase.no-modern.no-translation.no-scholia .controls { disp
 body.no-audio .transport { display: flex; justify-content: center; }
 body.no-audio #position { width: 8rem; margin-left: 0; border-color: var(--rule); }
 body.no-audio .verse { cursor: auto; }
-body.no-audio .verse:hover { background: none; }
+@media (hover: hover) { body.no-audio .verse:hover { background: none; } }
 
 /* Prose: a paragraph per speech, the section (Stephanus) that opens it in the margin and
    later ones marked in the text. */
@@ -839,23 +868,198 @@ body.no-audio .verse:hover { background: none; }
 .work:last-child { border-bottom: none; }
 .work-head { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
 .work-title { color: var(--text); text-decoration: none; font-size: 1.15em; }
-a.work-title:hover { color: var(--current-bar); }
+@media (hover: hover) { a.work-title:hover { color: var(--current-bar); } }
 .work-author { color: var(--muted); font-size: 0.8em; }
-.books { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
-.books a {
-  min-width: 1.9rem;
-  padding: 0.05rem 0.35rem;
+/* A work in several books: a button with the book last opened, and a menu of them all. */
+.work-pick { position: relative; margin-left: auto; }
+.pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 14rem;
+  padding: 0.1rem 0.45rem;
+  font: inherit;
+  font-size: 0.8em;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pick-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick svg { flex: none; }
+@media (hover: hover) { .pick:hover { color: var(--text); border-color: var(--current-bar); } }
+.pick[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
+.library .menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 7;
+  min-width: 9rem;
+  max-width: calc(100vw / var(--ui-scale, 1) - 32px);
+  max-height: min(55vh, 26rem);
+  max-height: min(55dvh, 26rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 0.3rem 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+  font-size: 0.85em;
+}
+.library .menu[hidden] { display: none; }
+.library .menu a { display: block; padding: 0.35rem 0.9rem; color: var(--text); text-decoration: none; white-space: nowrap; }
+@media (hover: hover) { .library .menu a:hover { background: var(--current-bg); } }
+.library .menu a[aria-current="true"] { color: var(--current-bar); font-weight: 600; }
+/* A collection's menu: its books, each with a toggle for its chapters. */
+.library .menu.nested { min-width: 15rem; }
+.member-row { display: flex; align-items: center; }
+.member-row a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.expand {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  margin-right: 0.3rem;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.expand svg { transition: transform 150ms ease; }
+.expand[aria-expanded="true"] svg { transform: rotate(180deg); }
+@media (hover: hover) { .expand:hover { color: var(--text); background: var(--current-bg); } }
+.library .chapters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.3rem, 1fr));
+  gap: 0.3rem;
+  margin: 0.1rem 0.8rem 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+.library .chapters[hidden] { display: none; }
+.library .chapters a {
+  display: block;
+  padding: 0.15rem 0;
   text-align: center;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
   border: 1px solid var(--rule);
   border-radius: 6px;
 }
-.books a:hover { color: var(--text); border-color: var(--current-bar); }
+@media (hover: hover) { .library .chapters a:hover { color: var(--text); border-color: var(--current-bar); } }
+.library .chapters a[aria-current="true"] { color: var(--current-bar); border-color: var(--current-bar); }
+
+/* Bookmarks, at the top of the library. */
+#bookmarks[hidden] { display: none; }
+.marks { list-style: none; margin: 0; padding: 0; }
+.marks li { display: flex; align-items: center; gap: 0.4rem; border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); }
+.marks li:last-child { border-bottom: none; }
+.mark { flex: 1; min-width: 0; display: grid; padding: 0.45rem 0; color: var(--text); text-decoration: none; }
+.mark-label { font-size: 0.95em; }
+.mark-snippet { color: var(--muted); font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (hover: hover) { .mark:hover .mark-label { color: var(--current-bar); } }
+.mark-delete {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font: 20px system-ui, sans-serif;
+  line-height: 1;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+@media (hover: hover) { .mark-delete:hover { color: var(--text); background: var(--current-bg); } }
+.mark-delete:disabled { opacity: 0.4; }
 .library .notice { color: var(--muted); font: 14px system-ui, sans-serif; text-align: center; margin-top: 2rem; }
 .library .notice code { font-size: 13px; }
 /* Verse without a paraphrase under each line: set closer. */
 body.no-paraphrase #verses:not(.prose) .verse { margin-bottom: 0.15rem; padding-top: 0.1rem; padding-bottom: 0.1rem; }
 /* Without a recording, the line or paragraph the σχόλια panel is showing. */
 body.show-scholia .verse.noted, body.scholia-popup .verse.noted { border-left-color: color-mix(in srgb, var(--current-bar) 60%, transparent); background: color-mix(in srgb, var(--current-bg) 40%, transparent); }
+
+/* A bookmarked verse: a ribbon at the left of its row. */
+.verse.bookmarked::before {
+  content: "";
+  position: absolute;
+  left: 0.45rem;
+  top: 0;
+  width: 0.5rem;
+  height: 0.85rem;
+  background: var(--current-bar);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);
+  opacity: 0.8;
+}
+@media (hover: hover) { .verse.bookmarked:not(.untimed):hover::before { opacity: 0; } }
+body.focused .verse.bookmarked:not(.f-cur)::before { display: none; }
+
+/* A passing message (bookmark added or removed), above the media bar. */
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--player-h, 7rem) + 0.8rem);
+  z-index: 8;
+  max-width: calc(100vw - 32px);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--bg);
+  font: 14px system-ui, sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%);
+  animation: toast-in 180ms ease-out;
+  transition: opacity 250ms ease;
+}
+#toast[hidden] { display: none; }
+#toast.out { opacity: 0; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+
+/* Showing a range of the book (?v=40-60): which, and the way back to all of it. */
+.range-note { text-align: center; margin: 0 0 1rem; font: 13px system-ui, sans-serif; color: var(--muted); }
+.range-note a { color: var(--current-bar); text-decoration: none; }
+body.focused .range-note { display: none; }
+
+/* While a book loads: grey lines in place of the verses, shown only if it takes a moment. */
+#verses.loading { animation: skel-in 250ms ease 180ms both; }
+@keyframes skel-in { from { opacity: 0; } }
+.skel { display: grid; grid-template-columns: 3rem 1fr; column-gap: 0.75rem; row-gap: 0.45rem; padding: 0.35rem 0; margin-bottom: 0.7rem; }
+.skel .sk-line { grid-column: 2; height: 0.8em; width: var(--w, 80%); border-radius: 4px; }
+.skel .sk-sub { height: 0.6em; width: calc(var(--w, 80%) - 12%); opacity: 0.6; }
+.skel .sk-line, .sch-skel span {
+  background: linear-gradient(90deg, var(--rule) 25%, color-mix(in srgb, var(--rule) 45%, var(--bg)) 50%, var(--rule) 75%);
+  background-size: 300% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+body.hide-paraphrase .skel .sk-sub { display: none; }
+@media (max-width: 520px) { .skel { grid-template-columns: 2.2rem 1fr; column-gap: 0.5rem; } }
+
+/* Notes not loaded yet: a few grey lines in the σχόλια panel. */
+.sch-skel { display: grid; gap: 0.55rem; padding: 0.7rem 0; }
+.sch-skel span { display: block; height: 0.75em; border-radius: 4px; }
+.sch-skel span:nth-child(1) { width: 40%; }
+.sch-skel span:nth-child(2) { width: 92%; }
+.sch-skel span:nth-child(3) { width: 85%; }
+.sch-skel span:nth-child(4) { width: 60%; }
+
+/* Moving between pages: the old page fades into the new; in the reader the bars stay
+   where they are (browsers with cross-document view transitions; others just load). */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  #topbar { view-transition-name: topbar; }
+  #player { view-transition-name: player; }
+  ::view-transition-group(*) { animation-duration: 200ms; }
+}

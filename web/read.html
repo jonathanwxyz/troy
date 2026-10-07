@@ -26,8 +26,8 @@
       if (v > 0) document.documentElement.style.setProperty(prop, v);
     }
   } catch {}
-  // And the font for the Greek (EB Garamond unless another was chosen).
-  try { const f = localStorage.getItem("font"); if (f === "gentium" || f === "didot") document.documentElement.dataset.font = f; } catch {}
+  // And the font for the Greek (Gentium unless another was chosen).
+  try { const f = localStorage.getItem("font"); if (f === "garamond" || f === "didot") document.documentElement.dataset.font = f; } catch {}
 </script>
 </head>
 <body>
@@ -44,6 +44,9 @@
       </button>
       <ul id="book-menu" role="listbox" aria-label="Book" hidden></ul>
     </div>
+    <button id="bookmark" title="Bookmark this verse (B)" aria-label="Bookmark this verse" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/></svg>
+    </button>
     <button id="to-start" title="Back to the beginning of the book">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 4h14M12 20V9M7 13l5-5 5 5"/></svg>
       <span class="to-start-text">beginning</span>
@@ -66,8 +69,8 @@
         <div class="font-row" role="group" aria-label="Font">
           <span class="size-name">Font</span>
           <span class="font-choices">
-            <button class="font-choice" data-font="garamond" aria-pressed="false">Garamond</button>
             <button class="font-choice" data-font="gentium" aria-pressed="false">Gentium</button>
+            <button class="font-choice" data-font="garamond" aria-pressed="false">Garamond</button>
             <button class="font-choice" data-font="didot" aria-pressed="false">Didot</button>
           </span>
         </div>
@@ -142,6 +145,7 @@
 </footer>
 
 <div id="gloss" role="tooltip" hidden></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
 
 <aside id="scholia" hidden aria-label="Scholia">
   <header class="sch-head">
@@ -158,6 +162,7 @@
   <div id="card-body"></div>
 </aside>
 <script src="theme.js"></script>
+<script src="shared.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

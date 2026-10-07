@@ -22,12 +22,16 @@ Routes:
   /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript, and
                          the English commentaries (Leaf, Seymour, Benner)
   /audio/<file>        a file from recordings/, with HTTP Range support for seeking
+  /api/bookmarks       JSON: the bookmarked verses (GET); POST one ({text, book, ref, …}) to add
+                       it, DELETE /api/bookmarks/<id> to remove it. Kept in data/bookmarks.json
 """
 import argparse
 import json
 import mimetypes
 import re
 import sqlite3
+import threading
+import time
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -37,6 +41,7 @@ WEB = ROOT / "web"
 RECORDINGS = ROOT / "recordings"
 DB = ROOT / "data" / "iliad.sqlite"
 LIBRARY = ROOT / "data" / "library.sqlite"
+BOOKMARKS = ROOT / "data" / "bookmarks.json"
 GREEK_NUMERALS = " ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
 MODEL = "mms"
 
@@ -112,6 +117,12 @@ ILIAD_CREDITS = [
 ]
 
 
+def collection_of(con):
+    """SQL for texts.collection, or NULL in a library built before there were collections."""
+    cols = {row[1] for row in con.execute("PRAGMA table_info(texts)")}
+    return "collection" if "collection" in cols else "NULL"
+
+
 def library_json():
     if not LIBRARY.exists():
         return {"categories": [], "missing": True}
@@ -119,11 +130,17 @@ def library_json():
     books = {}
     for text, n, label in con.execute("SELECT text, n, label FROM divisions ORDER BY text, n"):
         books.setdefault(text, []).append({"n": n, "label": label})
-    texts = {}
-    for slug, title, author, category, reader in con.execute(
-            "SELECT slug, title, author, category, reader FROM texts ORDER BY sort"):
-        texts.setdefault(category, []).append({
-            "slug": slug, "title": title, "author": author, "reader": reader, "books": books.get(slug, [])})
+    texts, collections = {}, {}
+    for slug, title, author, category, reader, collection in con.execute(
+            f"SELECT slug, title, author, category, reader, {collection_of(con)} FROM texts ORDER BY sort"):
+        t = {"slug": slug, "title": title, "author": author, "reader": reader, "books": books.get(slug, [])}
+        if collection:  # the texts of a collection (a Testament) go together, where its first one is
+            if (category, collection) not in collections:
+                collections[category, collection] = {"collection": collection, "title": collection, "texts": []}
+                texts.setdefault(category, []).append(collections[category, collection])
+            collections[category, collection]["texts"].append(t)
+        else:
+            texts.setdefault(category, []).append(t)
     cats = [{"name": name, "texts": texts.get(name, [])}
             for (name,) in con.execute("SELECT name FROM categories ORDER BY sort")]
     con.close()
@@ -159,7 +176,7 @@ def text_json(slug, n):
     if not LIBRARY.exists():
         return None
     con = sqlite3.connect(LIBRARY)
-    t = con.execute("SELECT title, author, form, cite, credit, notes_credit FROM texts "
+    t = con.execute(f"SELECT title, author, form, cite, credit, notes_credit, {collection_of(con)} FROM texts "
                     "WHERE slug = ? AND reader = 'text'", (slug,)).fetchone()
     rows = con.execute("SELECT seq, ref, content, speaker, para FROM segments WHERE text = ? AND div = ? "
                        "ORDER BY seq", (slug, n)).fetchall() if t else []
@@ -174,12 +191,13 @@ def text_json(slug, n):
     con.close()
     if not rows:
         return None
-    title, author, form, cite, credit, notes_credit = t
+    title, author, form, cite, credit, notes_credit, collection = t
     verses = [{"line": seq, "ref": ref, "text": content,
                **({"speaker": speaker} if speaker else {}), **({"para": True} if para else {}),
                **({"scholia": notes[seq]} if seq in notes else {})}
               for seq, ref, content, speaker, para in rows]
     return {"book": n, "text": slug, "title": title, "author": author, "form": form, "cite": cite,
+            **({"collection": collection} if collection else {}),
             "eyebrow": f"{author} · {title}" if author else title,
             "features": ["scholia"] if has_notes else [], "notesCredit": notes_credit,
             "books": books if len(books) > 1 else [], "audio": None, "verses": verses, "translation": [],
@@ -303,6 +321,59 @@ def word_groups(sharer_sets):
     return out
 
 
+# Bookmarks: verses marked in any text, newest first, in a JSON file (shared by every
+# device that uses this server).
+BOOKMARK_FIELDS = {"text": str, "book": int, "ref": str, "title": str, "label": str, "snippet": str}
+bookmarks_lock = threading.Lock()
+
+
+def load_bookmarks():
+    try:
+        return json.loads(BOOKMARKS.read_text(encoding="utf-8"))
+    except (FileNotFoundError, ValueError):
+        return []
+
+
+def save_bookmarks(items):
+    tmp = BOOKMARKS.with_suffix(".tmp")
+    tmp.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp.replace(BOOKMARKS)
+
+
+def add_bookmark(data):
+    """Add a bookmark (or return the one already on that verse); None if data is malformed."""
+    if not isinstance(data, dict):
+        return None
+    mark = {}
+    for key, kind in BOOKMARK_FIELDS.items():
+        value = data.get(key)
+        if not isinstance(value, kind) or (kind is str and len(value) > 300):
+            if key in ("text", "book", "ref"):
+                return None
+            value = None
+        mark[key] = value
+    with bookmarks_lock:
+        items = load_bookmarks()
+        for b in items:
+            if (b["text"], b["book"], b["ref"]) == (mark["text"], mark["book"], mark["ref"]):
+                return b
+        mark["id"] = f"{int(time.time() * 1000):x}"
+        mark["created"] = int(time.time())
+        items.insert(0, mark)
+        save_bookmarks(items)
+    return mark
+
+
+def delete_bookmark(mark_id):
+    with bookmarks_lock:
+        items = load_bookmarks()
+        kept = [b for b in items if b["id"] != mark_id]
+        if len(kept) == len(items):
+            return False
+        save_bookmarks(kept)
+    return True
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WEB), **kwargs)
@@ -320,10 +391,32 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(word_json(*map(int, m.groups())))
         elif m := re.fullmatch(r"/api/scholia/(\d+)/(\d+)", self.path):
             self.send_json(scholia_json(*map(int, m.groups())))
+        elif self.path == "/api/bookmarks":
+            self.send_json({"bookmarks": load_bookmarks()})
         elif self.path.startswith("/audio/"):
             self.send_audio(RECORDINGS / Path(self.path[len("/audio/"):]).name)
         else:
             super().do_GET()
+
+    def do_POST(self):
+        if self.path != "/api/bookmarks":
+            return self.send_error(HTTPStatus.NOT_FOUND)
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            data = json.loads(self.rfile.read(min(length, 1 << 16)))
+        except ValueError:
+            data = None
+        mark = add_bookmark(data)
+        if mark is None:
+            return self.send_error(HTTPStatus.BAD_REQUEST)
+        self.send_json(mark)
+
+    def do_DELETE(self):
+        m = re.fullmatch(r"/api/bookmarks/([0-9a-f]+)", self.path)
+        if not m or not delete_bookmark(m[1]):
+            return self.send_error(HTTPStatus.NOT_FOUND)
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.end_headers()
 
     def send_json(self, data):
         if data is None:
