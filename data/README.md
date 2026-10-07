@@ -79,8 +79,8 @@ another (link precision/recall, per-word agreement).
 
 - **paraphrase_links**: Homeric word → Gaza's paraphrase words, one row per pair
   (`book, line, word_index` as in `word_links`; `para_line, para_index` index the
-  whitespace chunks of `verses.paraphrase`). Hand-aligned; Books 1–7 so far.
-  Conventions: articles and ὦ go with their noun; Gaza's additions (λέγων etc.) stay
+  whitespace chunks of `verses.paraphrase`). Hand-aligned; Books 1–8 so far.
+  Conventions: an article goes with the word after it, ὦ with its vocative; Gaza's additions (λέγων etc.) stay
   unaligned; split verbs (ἐπὶ … ἔτελλεν) link both parts to the one Attic verb; when
   Gaza moves words across a line break, `para_line` differs from `line`. The source
   format is described at the top of `paraphrase_alignment/book01.txt`, the judgement calls in
