@@ -1,3 +1,223 @@
+/* The Greek text's fonts, served from this site (from Google Fonts; SIL Open Font
+   License, see fonts/README.md). Each face is split by script; a browser downloads only
+   the parts a page uses (unicode-range). */
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400i-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400i-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400i-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400i-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/eb-garamond-400-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/eb-garamond-700-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/eb-garamond-700-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/eb-garamond-700-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/eb-garamond-700-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'GFS Didot';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gfs-didot-400-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'GFS Didot';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gfs-didot-400-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'GFS Didot';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gfs-didot-400-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400i-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400i-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400i-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400i-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-400-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-700-greek-ext.woff2) format('woff2');
+  unicode-range: U+1F00-1FFF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-700-greek.woff2) format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-700-latin-ext.woff2) format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Gentium Book Plus';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(fonts/gentium-book-plus-700-latin.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 :root {
   --bg: #fdf6e3;
   --text: #2b2620;
@@ -87,6 +307,12 @@ main {
 }
 .eyebrow { color: var(--muted); letter-spacing: 0.06em; font-size: 0.85em; white-space: nowrap;
            min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* The title and book in full on wider screens, shortened on phones (app.js fills both). */
+#eyebrow .short, #book-label .short { display: none; }
+@media (max-width: 640px) {
+  #eyebrow .long, #book-label .long { display: none; }
+  #eyebrow .short, #book-label .short { display: inline; }
+}
 /* Book picker: a button and a short menu under it (a native select fills a phone's
    screen with its list). */
 #book-picker { position: relative; min-width: 0; }
@@ -151,7 +377,8 @@ main {
   background: transparent;
   border: 1px solid var(--rule);
   border-radius: 999px;
-  padding: 0.25rem 0.7rem;
+  height: 1.85rem;  /* as tall as the round buttons beside it */
+  padding: 0 0.7rem;
   cursor: pointer;
 }
 @media (hover: hover) { #to-start:hover { color: var(--text); border-color: var(--current-bar); } }
@@ -191,7 +418,7 @@ main {
 #topbar, #player { zoom: var(--ui-scale, 1); }
 
 /* Text size menu (Aa): text and interface, each stepped smaller or larger. */
-#size-picker { position: relative; flex: none; }
+#size-picker { position: relative; flex: none; display: flex; }  /* flex: no line box (and descent) around the button */
 #size-button {
   height: 1.85rem;
   padding: 0 0.45rem;
@@ -262,6 +489,11 @@ main {
 .credits { text-align: center; margin-bottom: 1rem; }
 
 #verses { list-style: none; margin: 0; padding: 0; }
+/* A book is hundreds of verses (thousands of words): the browser lays out and draws only
+   those near the screen, which is most of the work of opening a book on a phone. Each
+   remembers its size once drawn; until then it counts as a few lines. Not in focused mode,
+   where only three show anyway. */
+body:not(.focused) #verses > li { content-visibility: auto; contain-intrinsic-size: auto 6.5em; }
 .credit { margin: 0.4rem 0 0; color: var(--muted); font-family: system-ui, sans-serif; font-size: 12px; }
 body:not(.show-translation) #translation-credit { display: none; }
 body:not(.show-modern) #modern-credit { display: none; }
@@ -870,52 +1102,61 @@ body.no-audio .verse { cursor: auto; }
 .work-title { color: var(--text); text-decoration: none; font-size: 1.15em; }
 @media (hover: hover) { a.work-title:hover { color: var(--current-bar); } }
 .work-author { color: var(--muted); font-size: 0.8em; }
-/* A work in several books: a button with the book last opened, and a menu of them all. */
-.work-pick { position: relative; margin-left: auto; }
-.pick {
+/* A work in several books: a "Books" toggle under its title, folding out the list of them
+   in place (full names, the one last opened marked). */
+.fold {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  max-width: 14rem;
-  padding: 0.1rem 0.45rem;
-  font: inherit;
-  font-size: 0.8em;
+  margin-top: 0.3rem;
+  padding: 0.1rem 0.45rem 0.1rem 0.5rem;
+  font: 13px system-ui, sans-serif;
   color: var(--muted);
   background: transparent;
   border: 1px solid var(--rule);
   border-radius: 6px;
   cursor: pointer;
 }
-.pick-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pick svg { flex: none; }
-@media (hover: hover) { .pick:hover { color: var(--text); border-color: var(--current-bar); } }
-.pick[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
-.library .menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 7;
-  min-width: 9rem;
-  max-width: calc(100vw / var(--ui-scale, 1) - 32px);
-  max-height: min(55vh, 26rem);
-  max-height: min(55dvh, 26rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  margin: 0;
-  padding: 0.3rem 0;
+.fold svg { flex: none; transition: transform 150ms ease; }
+.fold[aria-expanded="true"] { color: var(--text); border-color: var(--current-bar); }
+.fold[aria-expanded="true"] svg { transform: rotate(180deg); }
+@media (hover: hover) { .fold:hover { color: var(--text); border-color: var(--current-bar); } }
+.library .book-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.3rem;
+  margin: 0.5rem 0 0.2rem;
+  padding: 0;
   list-style: none;
-  background: var(--bg);
+  font-size: 0.8em;
+}
+.library .book-list[hidden], .library .member-list[hidden] { display: none; }
+.library .book-list a {
+  display: block;
+  padding: 0.2rem 0.55rem;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+@media (hover: hover) { .library .book-list a:hover { border-color: var(--current-bar); } }
+.library .book-list a[aria-current="true"] { color: var(--current-bar); border-color: var(--current-bar); }
+/* A collection's books, each with a toggle for its chapters. */
+.library .member-list {
+  margin: 0.4rem 0 0.2rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.85em;
   border: 1px solid var(--rule);
   border-radius: 10px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
-  font-size: 0.85em;
 }
-.library .menu[hidden] { display: none; }
-.library .menu a { display: block; padding: 0.35rem 0.9rem; color: var(--text); text-decoration: none; white-space: nowrap; }
-@media (hover: hover) { .library .menu a:hover { background: var(--current-bg); } }
-.library .menu a[aria-current="true"] { color: var(--current-bar); font-weight: 600; }
-/* A collection's menu: its books, each with a toggle for its chapters. */
-.library .menu.nested { min-width: 15rem; }
+.library .member + .member { border-top: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); }
+.member-row a { display: block; padding: 0.35rem 0.9rem; color: var(--text); text-decoration: none; }
+@media (hover: hover) { .member-row a:hover { color: var(--current-bar); } }
+.member-row a[aria-current="true"] { color: var(--current-bar); font-weight: 600; }
 .member-row { display: flex; align-items: center; }
 .member-row a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .expand {
@@ -1038,7 +1279,7 @@ body.focused .range-note { display: none; }
 .skel { display: grid; grid-template-columns: 3rem 1fr; column-gap: 0.75rem; row-gap: 0.45rem; padding: 0.35rem 0; margin-bottom: 0.7rem; }
 .skel .sk-line { grid-column: 2; height: 0.8em; width: var(--w, 80%); border-radius: 4px; }
 .skel .sk-sub { height: 0.6em; width: calc(var(--w, 80%) - 12%); opacity: 0.6; }
-.skel .sk-line, .sch-skel span {
+.skel .sk-line, .sch-skel span, .card-skel span, .lib-skel span {
   background: linear-gradient(90deg, var(--rule) 25%, color-mix(in srgb, var(--rule) 45%, var(--bg)) 50%, var(--rule) 75%);
   background-size: 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
@@ -1054,6 +1295,20 @@ body.hide-paraphrase .skel .sk-sub { display: none; }
 .sch-skel span:nth-child(2) { width: 92%; }
 .sch-skel span:nth-child(3) { width: 85%; }
 .sch-skel span:nth-child(4) { width: 60%; }
+
+/* A word's card before its data comes: the word, then grey lines. */
+.card-skel { display: grid; gap: 0.6rem; padding: 0.5rem 0 0.3rem; min-width: 14rem; }
+.card-skel span { display: block; height: 0.75em; border-radius: 4px; }
+.card-skel span:nth-child(1) { width: 55%; height: 1em; }
+.card-skel span:nth-child(2) { width: 90%; }
+.card-skel span:nth-child(3) { width: 70%; }
+.card-skel span:nth-child(4) { width: 82%; }
+.card-skel span:nth-child(5) { width: 45%; }
+
+/* The library before its list comes: grey rows. */
+.lib-skel { margin: 2rem 0 0; display: grid; gap: 0.9rem; animation: skel-in 250ms ease 180ms both; }
+.lib-skel span { display: block; height: 0.9em; border-radius: 4px; width: var(--w, 60%); }
+.lib-skel span.h { height: 0.6em; width: 5rem; margin-top: 0.6rem; }
 
 /* Moving between pages: the old page fades into the new; in the reader the bars stay
    where they are (browsers with cross-document view transitions; others just load). */

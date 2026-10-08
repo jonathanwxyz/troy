@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fdf6e3">
+<meta name="description" content="Read Greek texts verse by verse, following a recitation, with a paraphrase, translations, word study and the ancient scholia.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-32.png" sizes="32x32">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -12,9 +13,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Reader</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,700;1,400&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&family=GFS+Didot&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>
   // The chosen theme, applied before the page draws (no flash of the other one).
@@ -27,8 +25,26 @@
     }
   } catch {}
   // And the font for the Greek (Gentium unless another was chosen).
-  try { const f = localStorage.getItem("font"); if (f === "garamond" || f === "didot") document.documentElement.dataset.font = f; } catch {}
+  {
+    let font = "gentium";
+    try { const f = localStorage.getItem("font"); if (f === "garamond" || f === "didot") document.documentElement.dataset.font = font = f; } catch {}
+    // Fetch its Greek at once, rather than once the stylesheet has been read.
+    const file = { gentium: "gentium-book-plus-400", garamond: "eb-garamond-400", didot: "gfs-didot-400" }[font];
+    for (const part of ["greek", "greek-ext"]) {
+      const link = Object.assign(document.createElement("link"),
+        { rel: "preload", as: "font", type: "font/woff2", crossOrigin: "anonymous", href: `fonts/${file}-${part}.woff2` });
+      document.head.append(link);
+    }
+  }
+  // Start fetching the book now, while the scripts load (app.js picks this up).
+  {
+    const q = new URLSearchParams(location.search), text = q.get("text") || "iliad", book = Number(q.get("book") || 1);
+    window.bookRequest = fetch(text === "iliad" ? `/api/book/${book}` : `/api/text/${encodeURIComponent(text)}/${book}`);
+  }
 </script>
+<script defer src="theme.js"></script>
+<script defer src="shared.js"></script>
+<script defer src="app.js"></script>
 </head>
 <body>
 <header id="topbar">
@@ -36,10 +52,10 @@
     <a id="home" href="./" title="Library" aria-label="Library">
       <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 5.5h5a3 3 0 0 1 3 3V20a2.5 2.5 0 0 0-2.5-2.5H4zM20 5.5h-5a3 3 0 0 0-3 3V20a2.5 2.5 0 0 1 2.5-2.5H20z"/></svg>
     </a>
-    <span class="eyebrow" id="eyebrow"></span>
+    <span class="eyebrow" id="eyebrow"><span class="long"></span><span class="short"></span></span>
     <div id="book-picker" hidden>
       <button id="book-select" aria-haspopup="listbox" aria-expanded="false" aria-controls="book-menu">
-        <span id="book-label"></span>
+        <span id="book-label"><span class="long"></span><span class="short"></span></span>
         <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></svg>
       </button>
       <ul id="book-menu" role="listbox" aria-label="Book" hidden></ul>
@@ -161,8 +177,5 @@
   <button id="card-close" aria-label="Close">×</button>
   <div id="card-body"></div>
 </aside>
-<script src="theme.js"></script>
-<script src="shared.js"></script>
-<script src="app.js"></script>
 </body>
 </html>

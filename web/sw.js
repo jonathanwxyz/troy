@@ -2,10 +2,10 @@
 //
 // The app's files and the API are fetched from the network first (revalidated, so a
 // change shows on the next load) and fall back to the cache when offline: books, words
-// and scholia already seen stay readable. Fonts never change, so they come from the
-// cache once fetched. Audio is left to the browser: it is fetched in byte ranges, which
+// and scholia already seen stay readable. Fonts (fonts/) never change, so they come from
+// the cache once fetched. Audio is left to the browser: it is fetched in byte ranges, which
 // a plain cache can't answer.
-const VERSION = "v7";
+const VERSION = "v8";
 const SHELL = `shell-${VERSION}`;
 const DATA = `data-${VERSION}`;
 const FONTS = "fonts";  // kept across versions
@@ -49,7 +49,7 @@ self.addEventListener("fetch", (e) => {
   const { request } = e;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") {
+  if (url.origin === location.origin && url.pathname.startsWith("/fonts/")) {
     e.respondWith(cacheFirst(request));
   } else if (url.origin !== location.origin || url.pathname.startsWith("/audio/")) {
     return;  // the browser handles it

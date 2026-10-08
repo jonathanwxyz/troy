@@ -63,12 +63,12 @@ function render(data) {
   list.classList.remove("loading");
   if (V_TO) applyRange(data);
   rememberVisit(TEXT, BOOK, data.collection);
-  try { localStorage.setItem(`meta:${TEXT}`, JSON.stringify({ title: data.title, books: data.books })); } catch {}
+  try { localStorage.setItem(`meta:${TEXT}`, JSON.stringify({ title: data.title, eyebrow: data.eyebrow, books: data.books })); } catch {}
   const has = new Set(data.features ?? []);
   for (const f of FEATURES) document.body.classList.toggle(`no-${f}`, !has.has(f));
   if (!has.has("audio")) document.body.classList.remove("focused");  // nothing to focus on
   list.classList.toggle("prose", data.form === "prose");
-  document.getElementById("eyebrow").textContent = data.title;
+  showTitle(data.eyebrow ?? data.title, data.title);
   const bookLabel = data.books.find((b) => b.n === data.book)?.label;
   document.title = `${data.title}${bookLabel ? ` · ${bookLabel}` : ""} — Reader`;
   fillBooks(data.books);
@@ -349,6 +349,31 @@ function setFocus(i) {
   }
 }
 
+// Bring a verse (or a section in prose) to the middle of the screen. Verses off screen
+// count as a guessed height until drawn (content-visibility in style.css), so the rows
+// passed on the way change size as they are drawn: a long jump goes at once rather than
+// gliding, and either way the view settles on the verse once its neighbours are drawn.
+let cancelSettle = null;  // the last centerRow's pending correction
+function centerRow(el, smooth = false) {
+  cancelSettle?.();
+  cancelSettle = null;
+  const far = Math.abs(el.getBoundingClientRect().top - innerHeight / 2) > innerHeight * 2;
+  const glide = smooth && !far;
+  el.scrollIntoView({ block: "center", behavior: glide ? "smooth" : "instant" });
+  const asked = Date.now();
+  const settle = () => requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (lastUserScroll > asked) return;  // the reader has scrolled since: leave the view to them
+    const r = el.getBoundingClientRect();
+    if (Math.abs(r.top + r.height / 2 - innerHeight / 2) > 40) el.scrollIntoView({ block: "center", behavior: "instant" });
+  }));
+  if (!glide) return settle();
+  // After the glide; a glide that doesn't move (already there) never ends, so not for long.
+  const done = () => { cancelSettle?.(); cancelSettle = null; settle(); };
+  const timer = setTimeout(done, 1000);
+  addEventListener("scrollend", done);
+  cancelSettle = () => { clearTimeout(timer); removeEventListener("scrollend", done); };
+}
+
 function update() {
   const t = audio.currentTime;
   const i = verseAt(t);
@@ -364,7 +389,7 @@ function update() {
       const el = verses[i].el;
       el.classList.add("current");
       if (follow.checked && !focused.checked && Date.now() - lastUserScroll > 4000) {
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        centerRow(el, true);
       }
     }
   }
@@ -473,7 +498,7 @@ function jumpToTyped() {
   }
   position.blur();
   if (target.entry) seekTo(verses.indexOf(target.entry), { play: false });
-  target.el.scrollIntoView({ block: "center", behavior: "smooth" });
+  centerRow(target.el, true);
   target.el.classList.remove("located");
   void target.el.offsetWidth;  // restart the highlight if it is still running
   target.el.classList.add("located");
@@ -507,14 +532,14 @@ function applyParaphrase() {
   document.body.classList.toggle("hide-paraphrase", !showParaphrase.checked);
   gloss.hidden = true;
   try { localStorage.setItem("showParaphrase", showParaphrase.checked ? "1" : "0"); } catch {}
-  if (current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+  if (current >= 0 && follow.checked) centerRow(verses[current].el);
 }
 try { if (localStorage.getItem("showParaphrase") === "0") showParaphrase.checked = false; } catch {}
 
 function applyTranslation() {
   document.body.classList.toggle("show-translation", showTranslation.checked);
   try { localStorage.setItem("showTranslation", showTranslation.checked ? "1" : "0"); } catch {}
-  if (current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+  if (current >= 0 && follow.checked) centerRow(verses[current].el);
 }
 try { showTranslation.checked = localStorage.getItem("showTranslation") === "1"; } catch {}
 showTranslation.addEventListener("change", applyTranslation);
@@ -523,7 +548,7 @@ applyTranslation();
 function applyModern() {
   document.body.classList.toggle("show-modern", showModern.checked);
   try { localStorage.setItem("showModern", showModern.checked ? "1" : "0"); } catch {}
-  if (current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+  if (current >= 0 && follow.checked) centerRow(verses[current].el);
 }
 try { showModern.checked = localStorage.getItem("showModern") === "1"; } catch {}
 showModern.addEventListener("change", applyModern);
@@ -801,19 +826,50 @@ function renderCard(data) {
   }
 }
 
+// Words looked up: shown at once when tapped again. Fetching starts as the finger goes
+// down, so on a slow connection it is often there by the tap.
+const wordCache = new Map();   // "line/index" -> response promise
+const wordLoaded = new Map();  // "line/index" -> response, once it has arrived
+function fetchWord(w) {
+  const id = `${w.dataset.line}/${w.dataset.index}`;
+  if (!wordCache.has(id)) {
+    wordCache.set(id, fetch(`/api/word/${BOOK}/${id}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((data) => { wordLoaded.set(id, data); return data; })
+      .catch((err) => { wordCache.delete(id); throw err; }));
+  }
+  return wordCache.get(id);
+}
+list.addEventListener("pointerdown", (e) => {
+  const w = e.target.closest(".w");
+  if (w) fetchWord(w).catch(() => {});
+});
+
 async function openCard(w) {
   selected?.classList.remove("selected");
   selected = w;
   w.classList.add("selected");
   card.hidden = false;
+  const id = `${w.dataset.line}/${w.dataset.index}`;
+  if (wordLoaded.has(id)) {
+    renderCard(wordLoaded.get(id));
+  } else {
+    // Until it comes: the word itself and grey lines, never the last word's card.
+    const skel = el("div", "card-skel");
+    for (let i = 0; i < 5; i++) skel.append(el("span"));
+    cardBody.replaceChildren(el("h2", null, w.textContent.replace(/^[^\p{L}]+|[^\p{L}’'᾽]+$/gu, "")), skel);
+  }
+  cardBody.scrollTop = 0;
   placeCard();
+  if (wordLoaded.has(id)) return;
   try {
-    const r = await fetch(`/api/word/${BOOK}/${w.dataset.line}/${w.dataset.index}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const data = await r.json();
+    const data = await fetchWord(w);
     if (selected === w) { renderCard(data); placeCard(); }
   } catch (err) {
-    if (selected === w) cardBody.replaceChildren(el("p", "note", `Could not load: ${err.message}`));
+    if (selected === w) {
+      cardBody.replaceChildren(el("p", "note", navigator.onLine === false
+        ? "This word isn't available offline yet." : `Could not load: ${err.message}`));
+    }
   }
 }
 
@@ -918,7 +974,7 @@ measureBars();
 document.addEventListener("sizechange", () => {
   measureBars();
   placeCard();
-  if (!focused.checked && current >= 0 && follow.checked) verses[current].el.scrollIntoView({ block: "center" });
+  if (!focused.checked && current >= 0 && follow.checked) centerRow(verses[current].el);
 });
 
 // Focused mode toggle (F), remembered per browser.
@@ -926,7 +982,7 @@ function applyFocused() {
   document.body.classList.toggle("focused", focused.checked);
   try { localStorage.setItem("focused", focused.checked ? "1" : "0"); } catch {}
   if (focused.checked) window.scrollTo(0, 0);
-  else if (current >= 0) verses[current].el.scrollIntoView({ block: "center" });
+  else if (current >= 0) centerRow(verses[current].el);
 }
 try { focused.checked = localStorage.getItem("focused") === "1"; } catch {}
 focused.addEventListener("change", applyFocused);
@@ -1076,7 +1132,18 @@ document.getElementById("to-start").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-// Book picker (hidden for a work in one piece): a menu of links to the other books.
+// The top bar's title and book: in full on wider screens ("Ὁμήρου Ἰλιάς", "Ῥαψῳδία Α (1)"),
+// shortened on phones ("Ἰλιάς", "Α (1)"); style.css shows one or the other.
+function setBoth(box, long, short) {
+  box.querySelector(".long").textContent = long;
+  box.querySelector(".short").textContent = short;
+}
+function showTitle(long, short) {
+  setBoth(document.getElementById("eyebrow"), long, short);
+}
+
+// Book picker (hidden for a work in one piece): a menu of links to the other books, by
+// their full names.
 function fillBooks(books) {
   bookMenu.replaceChildren(...books.map((b) => {
     const q = new URLSearchParams({ text: TEXT, book: b.n });
@@ -1085,13 +1152,13 @@ function fillBooks(books) {
     li.setAttribute("aria-selected", String(b.n === BOOK));
     const a = document.createElement("a");
     a.href = `?${q}`;
-    a.textContent = shortLabel(b.label, b.n);
-    if (b.label) a.title = b.label;
+    a.textContent = longLabel(b.label, b.n);
     li.append(a);
     return li;
   }));
   const here = books.find((b) => b.n === BOOK);
-  document.getElementById("book-label").textContent = here ? shortLabel(here.label, here.n) : "";
+  setBoth(document.getElementById("book-label"), here ? longLabel(here.label, here.n) : "",
+          here ? shortLabel(here.label, here.n) : "");
   bookPicker.hidden = books.length < 2;
 }
 function openBooks() {
@@ -1176,12 +1243,12 @@ function restorePlace() {
   const t = parseFloat(saved);
   // Show the place at once; the recording is moved there once it can be.
   const at = t > 0 ? verseAt(t) : -1;
-  if (at >= 0 && !focused.checked) verses[at].el.scrollIntoView({ block: "center" });
+  if (at >= 0 && !focused.checked) centerRow(verses[at].el);
   const apply = () => {
     if (t > 0 && (!audio.duration || t < audio.duration)) audio.currentTime = t;
     restored = true;
     update();
-    if (current >= 0 && !focused.checked) verses[current].el.scrollIntoView({ block: "center" });
+    if (current >= 0 && !focused.checked) centerRow(verses[current].el);
   };
   whenAudioReady(apply);
 }
@@ -1202,7 +1269,7 @@ function goToLinked() {
     restored = !RANGE;
     return;
   }
-  if (!focused.checked || !target.entry) target.el.scrollIntoView({ block: "center" });
+  if (!focused.checked || !target.entry) centerRow(target.el);
   noteTap(target.el.closest("li.verse") ?? target.el, target.el.getBoundingClientRect().top);
   if (!RANGE) {
     target.el.classList.add("located");
@@ -1390,7 +1457,7 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catc
 try {
   const meta = JSON.parse(localStorage.getItem(`meta:${TEXT}`));
   if (meta?.title) {
-    document.getElementById("eyebrow").textContent = meta.title;
+    showTitle(meta.eyebrow ?? meta.title, meta.title);
     fillBooks(meta.books ?? []);
   }
 } catch {}
@@ -1402,7 +1469,7 @@ for (let i = 0; i < 14; i++) {
   list.append(li);
 }
 
-fetch(API)
+(window.bookRequest ?? fetch(API))
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
   .then((data) => { render(data); update(); restorePlace(); setupMediaSession(); loadMarks(); })
   .catch((err) => {

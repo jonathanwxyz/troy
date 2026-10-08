@@ -1,6 +1,7 @@
 // Library: bookmarks, then the texts by category (from /api/library), each linking to the
-// reader. A work in several books goes back to the book last opened, with a menu of the
-// others; a collection (a Testament) has a menu of its books, each with its chapters.
+// reader. A work in several books goes back to the book last opened, and lists them all
+// under a "Books" fold; a collection (a Testament) lists its books there, each with its
+// chapters.
 const root = document.getElementById("library");
 const marksBox = document.getElementById("bookmarks");
 
@@ -29,51 +30,36 @@ function memberFor(c) {
   return c.texts.find((t) => slugOf(t) === slug) ?? c.texts[0];
 }
 
-// Menus: one open at a time; a tap elsewhere or Escape closes it.
-let openMenu = null;
-function closeMenu() {
-  if (!openMenu) return;
-  openMenu.menu.hidden = true;
-  openMenu.button.setAttribute("aria-expanded", "false");
-  openMenu = null;
+// A fold-out under a work's title: a "Books" toggle that shows or hides its list in place.
+// Open folds are remembered for the visit (sessionStorage), so coming back keeps them.
+function foldKey(id) { return `fold:${id}`; }
+function isOpen(id) {
+  try { return sessionStorage.getItem(foldKey(id)) === "1"; } catch { return false; }
 }
-function menuButton(text, menu) {
-  const b = el("button", "pick");
-  b.append(el("span", "pick-label", text));
+function fold(id, label, panel) {
+  const b = el("button", "fold");
+  b.append(el("span", null, label));
   b.insertAdjacentHTML("beforeend", CHEVRON);
-  b.setAttribute("aria-haspopup", "true");
-  b.setAttribute("aria-expanded", "false");
+  const open = isOpen(id);
+  b.setAttribute("aria-expanded", String(open));
+  panel.hidden = !open;
   b.addEventListener("click", () => {
-    if (openMenu?.menu === menu) return closeMenu();
-    closeMenu();
-    menu.hidden = false;
-    b.setAttribute("aria-expanded", "true");
-    openMenu = { menu, button: b };
-    // Keep it on screen, and show the place last opened.
-    menu.style.left = "";
-    const zoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ui-scale")) || 1;
-    const over = menu.getBoundingClientRect().right - (innerWidth - 16);
-    if (over > 0) menu.style.left = `${-over / zoom}px`;
-    const here = menu.querySelector('[aria-current="true"]');
-    if (here) menu.scrollTop = here.offsetTop - (menu.clientHeight - here.offsetHeight) / 2;
+    panel.hidden = !panel.hidden;
+    b.setAttribute("aria-expanded", String(!panel.hidden));
+    try { sessionStorage.setItem(foldKey(id), panel.hidden ? "0" : "1"); } catch {}
   });
   return b;
 }
-document.addEventListener("pointerdown", (e) => {
-  if (openMenu && !openMenu.menu.contains(e.target) && !openMenu.button.contains(e.target)) closeMenu();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && openMenu) { const b = openMenu.button; closeMenu(); b.focus(); }
-});
 
-// A text's books, as a list of links (the one last opened marked).
+// A text's books as links, by their full names (the one last opened marked); a
+// collection's chapters as a grid of numbers.
 function bookLinks(t, cls) {
   const ul = el("ul", cls);
   const here = bookFor(t);
   for (const b of t.books) {
-    const a = el("a", null, cls === "chapters" ? String(b.n) : shortLabel(b.label, b.n));
+    const a = el("a", null, cls === "chapters" ? String(b.n) : longLabel(b.label, b.n));
     a.href = readerHref(slugOf(t), b.n);
-    if (b.label) a.title = b.label;
+    if (b.label && cls === "chapters") a.title = b.label;
     if (b.n === here && lastBook(slugOf(t))) a.setAttribute("aria-current", "true");
     const li = el("li");
     li.append(a);
@@ -91,18 +77,14 @@ function workEntry(t) {
   if (t.author) head.append(el("span", "work-author", t.author));
   work.append(head);
   if (t.books.length > 1) {
-    const menu = bookLinks(t, "menu");
-    menu.hidden = true;
-    const here = t.books.find((b) => b.n === bookFor(t));
-    const picker = el("div", "work-pick");
-    picker.append(menuButton(shortLabel(here?.label, here?.n ?? 1), menu), menu);
-    head.append(picker);
+    const list = bookLinks(t, "book-list");
+    work.append(fold(slugOf(t), "Books", list), list);
   }
   return work;
 }
 
-// A collection (a Testament): its title opens the book last read in it; the menu lists
-// its books, each opening at the chapter last read, with its chapters under a toggle.
+// A collection (a Testament): its title opens the book last read in it; under it, its
+// books, each opening at the chapter last read, with its chapters under a toggle.
 function collectionEntry(c) {
   const work = el("div", "work collection");
   const head = el("div", "work-head");
@@ -110,8 +92,8 @@ function collectionEntry(c) {
   const title = el("a", "work-title", c.title);
   title.href = hrefFor(member);
   head.append(title);
-  const menu = el("ul", "menu nested");
-  menu.hidden = true;
+  work.append(head);
+  const books = el("ul", "member-list");
   for (const t of c.texts) {
     const li = el("li", "member");
     const row = el("div", "member-row");
@@ -134,12 +116,9 @@ function collectionEntry(c) {
       row.append(toggle);
       li.append(chapters);
     }
-    menu.append(li);
+    books.append(li);
   }
-  const picker = el("div", "work-pick");
-  picker.append(menuButton(member.title, menu), menu);
-  head.append(picker);
-  work.append(head);
+  work.append(fold(`collection:${c.collection ?? c.title}`, "Books", books), books);
   return work;
 }
 
@@ -197,11 +176,28 @@ function renderMarks(marks) {
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 
-bookmarksApi.list().then(renderMarks).catch(() => renderMarks([]));
-fetch("/api/library")
+// The bookmarks and the library are shown together, so the bookmarks don't push the
+// list down when they arrive after it.
+const marksReady = bookmarksApi.list().catch(() => []);
+// Grey rows until the list comes (they fade in only if it takes a moment).
+const dropSkeleton = () => document.querySelector(".lib-skel")?.remove();
+{
+  const skel = el("div", "lib-skel");
+  skel.setAttribute("aria-hidden", "true");
+  for (let i = 0; i < 9; i++) {
+    const s = el("span", i % 4 === 0 ? "h" : null);
+    s.style.setProperty("--w", `${45 + ((i * 29) % 40)}%`);
+    skel.append(s);
+  }
+  marksBox.before(skel);  // above the bookmarks and the list; removed when they come
+}
+(window.libraryRequest ?? fetch("/api/library"))
   .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-  .then(render)
-  .catch((err) => {
+  .then(async (data) => { const marks = await marksReady; dropSkeleton(); renderMarks(marks); render(data); })
+  .catch(async (err) => {
+    const marks = await marksReady;
+    dropSkeleton();
+    renderMarks(marks);
     root.replaceChildren(el("p", "notice", navigator.onLine === false || err instanceof TypeError
       ? "The library isn't available offline yet: open it once while online."
       : `Could not load the library: ${err.message}`));

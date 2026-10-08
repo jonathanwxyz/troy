@@ -8,6 +8,13 @@ function shortLabel(label, n) {
   return m ? `${m[1]} (${n})` : label ?? String(n);
 }
 
+// A book's full name, numbered where its label is a numeral letter ("Ῥαψῳδία Α (1)"):
+// for menus, and the top bar on wider screens.
+function longLabel(label, n) {
+  if (!label) return String(n);
+  return /\s\p{Script=Greek}{1,2}$/u.test(label) ? `${label} (${n})` : label;
+}
+
 // The reader's address for a text's book, optionally at a verse or range (?v=40, ?v=17a-18c).
 function readerHref(slug, book, v) {
   const q = new URLSearchParams({ text: slug, book });
