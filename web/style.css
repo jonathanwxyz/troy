@@ -1057,6 +1057,24 @@ body.no-audio .verse { cursor: auto; }
    later ones marked in the text. */
 #verses.prose .verse { margin-bottom: 0.9rem; line-height: 1.6; }
 #verses.prose .num { visibility: visible; padding-top: 0.45em; }
+/* Prose with a recording: the sentence being read lights up (a sentence carried into the
+   next section lights up there in turn); a sentence is tapped to go to it. The paragraph
+   itself isn't a target, and there is no focused mode. */
+#verses.prose .sent {
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+#verses.prose .sent.current { background: var(--current-bg); box-shadow: 0 0 0 2px var(--current-bg); }
+#verses.prose .sent.current.pausing { background: var(--pause-bg); box-shadow: 0 0 0 2px var(--pause-bg); }
+#verses.prose .sent.held { box-shadow: 0 0 0 2px var(--current-bg), inset 0 -2px 0 var(--current-bar); }
+@media (hover: hover) {
+  #verses.prose .verse:hover { background: none; }
+  #verses.prose .sent:hover { background: color-mix(in srgb, var(--current-bg) 45%, transparent); }
+}
+body.prose-text .toggle:has(#focused) { display: none; }
 .speaker { color: var(--muted); font-size: 0.78em; letter-spacing: 0.05em; margin-right: 0.15em; }
 .ref-mark {
   font: 11px system-ui, sans-serif;

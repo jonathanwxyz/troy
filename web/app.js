@@ -66,7 +66,9 @@ function render(data) {
   try { localStorage.setItem(`meta:${TEXT}`, JSON.stringify({ title: data.title, eyebrow: data.eyebrow, books: data.books })); } catch {}
   const has = new Set(data.features ?? []);
   for (const f of FEATURES) document.body.classList.toggle(`no-${f}`, !has.has(f));
-  if (!has.has("audio")) document.body.classList.remove("focused");  // nothing to focus on
+  // Focused mode shows whole rows: not for prose, where a sentence is what plays.
+  document.body.classList.toggle("prose-text", data.form === "prose");
+  if (!has.has("audio") || data.form === "prose") document.body.classList.remove("focused");
   list.classList.toggle("prose", data.form === "prose");
   showTitle(data.eyebrow ?? data.title, data.title);
   const bookLabel = data.books.find((b) => b.n === data.book)?.label;
@@ -237,20 +239,44 @@ function renderProse(data) {
     if (v.ref && v.ref !== lastRef) refsIn.push(v.ref);
     if (v.speaker) text.append(el("span", "speaker", v.speaker), " ");
     const seg = el("span", "seg");
+    let sectionRef = null;
     if (v.ref && v.ref !== lastRef) {
       if (opens) num.textContent = v.ref;
       else seg.append(el("span", "ref-mark", v.ref), " ");
-      refs.push({ ref: v.ref, el: opens ? text.parentNode : seg, entry: null });
+      sectionRef = { ref: v.ref, el: opens ? text.parentNode : seg, entry: null };
+      refs.push(sectionRef);
       lastRef = v.ref;
     }
-    seg.append(v.text);
+    if (v.parts) {
+      // With a recording: each sentence is timed, and is what lights up, follows and seeks.
+      v.parts.forEach((part, k) => {
+        if (k) seg.append(" ");
+        const sent = el("span", "sent", part.text);
+        const entry = { line: v.line, ref: lastRef, start: part.start, speechEnd: part.speechEnd, end: part.end,
+                        el: sent, row: li };
+        entryOf.set(sent, entry);
+        sent.addEventListener("click", (e) => {
+          if (e.target.closest(".w")) return;
+          seekTo(verses.indexOf(entry));
+        });
+        verses.push(entry);
+        if (sectionRef && !sectionRef.entry) sectionRef.entry = entry;
+        seg.append(sent);
+      });
+    } else {
+      seg.append(v.text);
+    }
     text.append(seg, " ");
   }
   close();
   list.append(frag);
+  verses.sort((a, b) => a.start - b.start);
 }
 
 // Each row knows which segments its notes are on (for the scholia panel and popup).
+// A timed entry's row: the verse itself, or for prose the paragraph its sentence is in.
+const rowOf = (entry) => entry.row ?? entry.el;
+
 function setNoteKey(li, from, to, label) {
   Object.assign(li.dataset, { from, to, label });
 }
@@ -379,7 +405,7 @@ function update() {
   const i = verseAt(t);
   if (verses.length) {
     setFocus(Math.max(i, 0));
-    showScholiaFor(noteKey(verses[focusIdx].el));
+    showScholiaFor(noteKey(rowOf(verses[focusIdx])));
   }
   if (i !== current) {
     if (current >= 0) verses[current].el.classList.remove("current", "pausing");
@@ -410,7 +436,8 @@ function update() {
   if (i >= 0) {
     const v = verses[i];
     v.el.classList.toggle("pausing", t >= v.speechEnd);
-    showPosition((v.line === 0 ? "title" : `${BOOK}.${v.ref ?? v.line}`) + (heldBy === v ? " · held" : ""));
+    const r = v.ref ?? v.line;
+    showPosition((v.line === 0 ? "title" : DATA.books.length > 1 ? `${BOOK}.${r}` : r) + (heldBy === v ? " · held" : ""));
   } else {
     showPosition(verses.length ? "—" : "");  // no recording: the box is just for jumping
   }
@@ -712,7 +739,7 @@ function applyScholia() {
   try { localStorage.setItem("showScholia", showScholia.checked ? "1" : "0"); } catch {}
   if (panel) {
     scholiaShown = null;
-    if (focusIdx >= 0) showScholiaFor(noteKey(verses[focusIdx].el));
+    if (focusIdx >= 0) showScholiaFor(noteKey(rowOf(verses[focusIdx])));
     else if (DATA && !DATA.audio) showScholiaFor(noteKey(readingRow() ?? list.querySelector("li.verse")));
   }
 }
@@ -938,7 +965,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected
 // On a touch screen a tap counts: the tapped verse holds until a tap elsewhere.
 list.addEventListener("mouseover", (e) => {
   const text = e.target.closest(".text");
-  if (text) hovered = entryOf.get(text.closest(".verse")) ?? null;
+  if (text) hovered = entryOf.get(e.target.closest(".sent")) ?? entryOf.get(text.closest(".verse")) ?? null;
 });
 list.addEventListener("mouseout", (e) => {
   const text = e.target.closest(".text");
@@ -979,7 +1006,7 @@ document.addEventListener("sizechange", () => {
 
 // Focused mode toggle (F), remembered per browser.
 function applyFocused() {
-  document.body.classList.toggle("focused", focused.checked);
+  document.body.classList.toggle("focused", focused.checked && DATA?.form !== "prose");
   try { localStorage.setItem("focused", focused.checked ? "1" : "0"); } catch {}
   if (focused.checked) window.scrollTo(0, 0);
   else if (current >= 0) centerRow(verses[current].el);
@@ -1204,12 +1231,12 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); stepBack(); }
   else if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); stepForward(); }
   else if (e.ctrlKey || e.metaKey || e.altKey) return;
-  else if ((e.key === "f" || e.key === "F") && !document.body.classList.contains("no-audio")) {
+  else if ((e.key === "f" || e.key === "F") && !document.body.classList.contains("no-audio") && DATA?.form !== "prose") {
     focused.checked = !focused.checked;
     applyFocused();
   } else if ((e.key === "s" || e.key === "S") && hasScholia) {
     if (document.body.classList.contains("scholia-popup")) closeScholia();
-    else if (popupMode()) { if (focusIdx >= 0 && verses[focusIdx].scholia) openScholiaPopup(noteKey(verses[focusIdx].el)); }
+    else if (popupMode()) { if (focusIdx >= 0 && verses[focusIdx].scholia) openScholiaPopup(noteKey(rowOf(verses[focusIdx]))); }
     else { showScholia.checked = !showScholia.checked; applyScholia(); }
   }
 });
@@ -1347,7 +1374,10 @@ function onScreen(row) {
 function markTarget() {
   const cur = current >= 0 ? verses[current] : null;
   const tapped = tappedRow && Date.now() - tappedAt < 60000 && onScreen(tappedRow);
-  let li = cur && cur.line > 0 && onScreen(cur.el) ? cur.el : tapped ? tappedRow : readingRow();
+  const playing = cur && cur.line > 0 && onScreen(cur.el);
+  let li = playing ? rowOf(cur) : tapped ? tappedRow : readingRow();
+  // Prose being recited: the section of the sentence playing.
+  if (playing && cur.row && cur.ref) return { li, ref: cur.ref, seg: cur.el.closest(".seg") };
   const probe = li === tappedRow ? tappedY - scrollY : innerHeight * 0.4;
   if (li && !li.dataset.ref && !li.classList.contains("prose-para")) li = li.nextElementSibling?.closest("li.verse");
   if (!li) return null;

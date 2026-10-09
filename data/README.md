@@ -10,6 +10,12 @@ of git; `iliad.tsv` because its source states no licence.
 (`library/catalogue.json`); its downloads are cached in `raw/library/`. It stays out of
 git, like the catalogue.
 
+`library_audio.sqlite` holds the library texts' recordings: which file each book plays
+and when each line (verse) or sentence (prose) is spoken, built by
+`scripts/align_library.py` from the catalogue's `"audio"` entries and the emissions in
+`recordings/`. It is kept apart so that rebuilding `library.sqlite` leaves it alone
+(realign after a rebuild that changes a text). It stays out of git.
+
 ## Rebuilding
 
 Run in this order; each script replaces only its own tables. Pages are cached in `raw/`.

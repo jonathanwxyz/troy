@@ -10,7 +10,10 @@ Routes:
   /api/library         JSON: the categories and their texts, from data/library.sqlite
                        (built by scripts/library.py from the local catalogue)
   /api/text/<slug>/<n> JSON: one book (division) of a library text: its segments, with
-                       the shape of /api/book (verses), for the reader
+                       the shape of /api/book (verses), for the reader; where a recording
+                       is aligned (data/library_audio.sqlite, scripts/align_library.py),
+                       its URL, and timings per line (verse) or per sentence (prose:
+                       a segment's "parts")
   /api/notes/<slug>/<n>/<a>-<b>  JSON: a library text's notes on its segments a..b (seq),
                        shaped like /api/scholia
   /api/book/<n>        JSON: an Iliad book: title, audio URL and verses (text, paraphrase, timings,
@@ -21,7 +24,7 @@ Routes:
   /api/word/<b>/<l>/<i>  JSON: treebank parse of word i (whitespace chunk) of verse b.l
   /api/scholia/<b>/<l>   JSON: the ancient scholia on verse b.l, grouped by manuscript, and
                          the English commentaries (Leaf, Seymour, Benner)
-  /audio/<file>        a file from recordings/, with HTTP Range support for seeking
+  /audio/<path>        a file under recordings/ (subfolders too), with HTTP Range support for seeking
   /api/bookmarks       JSON: the bookmarked verses (GET); POST one ({text, book, ref, …}) to add
                        it, DELETE /api/bookmarks/<id> to remove it. Kept in data/bookmarks.json
 """
@@ -29,6 +32,7 @@ import argparse
 import json
 import mimetypes
 import re
+import urllib.parse
 import sqlite3
 import threading
 import time
@@ -41,6 +45,7 @@ WEB = ROOT / "web"
 RECORDINGS = ROOT / "recordings"
 DB = ROOT / "data" / "iliad.sqlite"
 LIBRARY = ROOT / "data" / "library.sqlite"
+LIBRARY_AUDIO = ROOT / "data" / "library_audio.sqlite"
 BOOKMARKS = ROOT / "data" / "bookmarks.json"
 GREEK_NUMERALS = " ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ"
 MODEL = "mms"
@@ -192,16 +197,50 @@ def text_json(slug, n):
     if not rows:
         return None
     title, author, form, cite, credit, notes_credit, collection = t
-    verses = [{"line": seq, "ref": ref, "text": content,
-               **({"speaker": speaker} if speaker else {}), **({"para": True} if para else {}),
-               **({"scholia": notes[seq]} if seq in notes else {})}
-              for seq, ref, content, speaker, para in rows]
+    recording, timed = library_audio(slug, n)
+    verses = []
+    for seq, ref, content, speaker, para in rows:
+        v = {"line": seq, "ref": ref, "text": content,
+             **({"speaker": speaker} if speaker else {}), **({"para": True} if para else {}),
+             **({"scholia": notes[seq]} if seq in notes else {})}
+        pieces = timed.get(seq)
+        if pieces and form == "verse":
+            v.update(pieces[0][1])
+        elif pieces:  # prose: the segment's sentences, each timed (their text is the segment's)
+            v["parts"] = [{"text": text, **times} for text, times in pieces]
+        verses.append(v)
+    credits = [{"text": credit}] if credit else []
+    if recording and recording[1]:
+        credits.append({"text": recording[1]})
     return {"book": n, "text": slug, "title": title, "author": author, "form": form, "cite": cite,
             **({"collection": collection} if collection else {}),
             "eyebrow": f"{author} · {title}" if author else title,
-            "features": ["scholia"] if has_notes else [], "notesCredit": notes_credit,
-            "books": books if len(books) > 1 else [], "audio": None, "verses": verses, "translation": [],
-            "credits": [{"text": credit}] if credit else []}
+            "features": (["scholia"] if has_notes else []) + (["audio"] if recording else []),
+            "notesCredit": notes_credit, "books": books if len(books) > 1 else [],
+            "audio": f"/audio/{urllib.parse.quote(recording[0])}" if recording else None,
+            "verses": verses, "translation": [], "credits": credits}
+
+
+def library_audio(slug, n):
+    """A library book's aligned recording, (file under recordings/, credit) or None, and
+    its timings: {seq: [(text, {start, speechEnd, end}), ...]} by sentence (one per line
+    of verse)."""
+    if not LIBRARY_AUDIO.exists():
+        return None, {}
+    con = sqlite3.connect(LIBRARY_AUDIO)
+    try:
+        rec = con.execute("SELECT file, credit FROM recordings WHERE text = ? AND div = ?", (slug, n)).fetchone()
+        if not rec or not (RECORDINGS / rec[0]).is_file():
+            return None, {}
+        timed = {}
+        for seq, content, start, speech_end, end in con.execute(
+                "SELECT seq, content, start, speech_end, end FROM units WHERE text = ? AND div = ? "
+                "ORDER BY seq, piece", (slug, n)):
+            timed.setdefault(seq, []).append(
+                (content, {"start": round(start, 2), "speechEnd": round(speech_end, 2), "end": round(end, 2)}))
+        return rec, timed
+    finally:
+        con.close()
 
 
 # Sources shown in the scholia panel, in order: (id, siglum, name, language). The
@@ -394,7 +433,12 @@ class Handler(SimpleHTTPRequestHandler):
         elif self.path == "/api/bookmarks":
             self.send_json({"bookmarks": load_bookmarks()})
         elif self.path.startswith("/audio/"):
-            self.send_audio(RECORDINGS / Path(self.path[len("/audio/"):]).name)
+            # Any file under recordings/ (a library text's recordings stay in their folders),
+            # never above it.
+            path = (RECORDINGS / urllib.parse.unquote(self.path[len("/audio/"):].split("?")[0])).resolve()
+            if not path.is_relative_to(RECORDINGS.resolve()):
+                return self.send_error(HTTPStatus.NOT_FOUND)
+            self.send_audio(path)
         else:
             super().do_GET()
 
