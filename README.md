@@ -5,7 +5,7 @@ is highlighted as it plays. It began with Homer's *Iliad*, where each line comes
 help for reading it:
 
 - **Gaza's paraphrase**: Theodorus Gaza's Byzantine prose paraphrase under each line;
-  hovering a Homeric word shows its equivalent in the paraphrase (Books 1–23 so far).
+  hovering a Homeric word shows its equivalent in the paraphrase (all 24 books).
 - **Word cards**: click a word for its lemma, a short definition, its morphology and its
   role in the sentence (from the Perseus treebank).
 - **Translations**: A. T. Murray's English (line by line in Book 1, in short passages
